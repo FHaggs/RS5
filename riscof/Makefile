@@ -5,6 +5,7 @@ DUALPORT_MEM ?= 1
 IQUEUE_SIZE  ?= 2
 DELAY_CYCLES ?= 0
 TRIPLET      ?= riscv64-elf
+PYTHON       ?= python3
 
 ENV_VARS = \
 	TRIPLET=$(TRIPLET)\
@@ -19,6 +20,12 @@ default: baseline
 all: baseline extensions
 
 report-all: report-baseline report-extensions
+
+fuzzer-demo:
+	@$(ENV_VARS) $(PYTHON) fuzzer_demo.py
+
+fuzzer-generate:
+	@$(PYTHON) fuzzer_demo.py --generate-only
 
 extensions: arch-test-update
 	@$(ENV_VARS) riscof run --suite=riscv-arch-test/riscv-test-suite --env=riscv-arch-test/riscv-test-suite/env --work-dir=$(WORK_DIR)/extensions_work --no-browser --config=extensions.ini
@@ -46,6 +53,6 @@ $(WORK_DIR)/extensions_work/report.html:
 
 clean:
 	@echo "Cleaning..."
-	@rm -rf $(WORK_DIR)/baseline_work $(WORK_DIR)/extensions_work riscv-arch-test
+	@rm -rf $(WORK_DIR)/baseline_work $(WORK_DIR)/extensions_work fuzzer_demo_suite fuzzer_demo_work riscv-arch-test
 
-.PHONY: all default baseline extensions arch-test-update clean
+.PHONY: all default baseline extensions fuzzer-demo fuzzer-generate arch-test-update clean

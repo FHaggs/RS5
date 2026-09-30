@@ -100,3 +100,54 @@ When a test fails, it shows the lines where its dumped memory contents differ.
 To see more details of the test, check the `WORK_DIR/<isa>_work/rv32i_m` folder containing the desired test.
 The `ref` subfolder contains a `.disass` file with the disassembled test binary, and a `.log` with an step-by-step execution log by the gold model.
 Both `ref` and `dut` folders contain a `.signature` that holds the test output and must match for the test to pass.
+
+## Fuzzer demo
+
+`fuzzer_demo.py` is a small starting point for an assembly fuzzer. It contains two
+hardcoded RV32I tests:
+
+* integer addition and immediate arithmetic;
+* a store/load round trip with a conditional branch.
+
+The script generates a minimal RISCOF suite in `fuzzer_demo_suite`, then runs the
+existing RS5 and Sail plugins. RISCOF compares the signature produced by both
+models and writes the result to `fuzzer_demo_work/report.html`.
+
+Run the complete demo from this directory:
+
+```
+make fuzzer-demo
+```
+
+To inspect only the generated assembly without requiring RISCOF, Sail, Verilator,
+or a RISC-V toolchain:
+
+```
+make fuzzer-generate
+```
+
+The same implementation parameters and `TRIPLET` override used by the other
+targets are supported:
+
+```
+TRIPLET=riscv64-unknown-elf FORWARDING=0 make fuzzer-demo
+```
+
+This first demo intentionally keeps test generation deterministic. A future
+fuzzer can replace the two `AssemblyTest` entries with seeded random instruction
+generation while retaining the suite generation and RISCOF comparison path.
+
+### Inspecting signatures
+
+`signature_diff.py` compares two textual RISCOF signature files. Each 32-bit word
+is displayed in hexadecimal, unsigned decimal, and signed decimal forms:
+
+```
+python3 signature_diff.py \
+  fuzzer_demo_work/rv32i_m/I/src/demo-add.S/dut/DUT-RS5.signature \
+  fuzzer_demo_work/rv32i_m/I/src/demo-add.S/ref/Reference-sail_c_simulator.signature
+```
+
+The command exits with status 0 when the signatures match, 1 when they differ,
+and 2 when a file cannot be read or contains invalid data. Use `--word-bits 64`
+for 64-bit signature words.
