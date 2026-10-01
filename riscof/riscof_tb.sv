@@ -326,8 +326,27 @@ module riscof_tb
     logic [31:0] SIG_START, SIG_END, TOHOST_ADDR;
     string       SIG_PATH;
 
+    /* Optional: +MAX_CYCLES=<dec> (default 1M cycles = 10ms) and +META_PATH=<path> */
+    longint unsigned MAX_CYCLES = 1_000_000;
+    string           META_PATH  = "";
+
+    longint unsigned cycles  = 0;
+    longint unsigned retired = 0;
+    bit              tohost_written = 1'b0;
+
     always_ff @(posedge clk) begin
-        if (mem_address == TOHOST_ADDR && mem_write_enable != '0)
+        cycles <= cycles + 1;
+
+        /* Same condition used to increment minstret */
+        if (reset_n && !(dut.CSRBank1.hold || dut.CSRBank1.ctrl_i.is_nop))
+            retired <= retired + 1;
+
+        /* Finish one cycle after the write so tohost_written is visible in the final block */
+        if (tohost_written)
+            $finish();
+        else if (mem_address == TOHOST_ADDR && mem_write_enable != '0)
+            tohost_written <= 1'b1;
+        else if (cycles >= MAX_CYCLES)
             $finish();
     end
 
@@ -340,18 +359,28 @@ module riscof_tb
             $fatal(1, "Missing +TOHOST_ADDR=<hex>");
         if (!$value$plusargs("SIG_PATH=%s", SIG_PATH))
             $fatal(1, "Missing +SIG_PATH=<path>");
+        void'($value$plusargs("MAX_CYCLES=%d", MAX_CYCLES));
+        void'($value$plusargs("META_PATH=%s", META_PATH));
 
         fd = $fopen(SIG_PATH, "w");
-        #10ms;
-        $finish();
     end
 
     final begin
+        int meta_fd;
+
         if (fd != 0) begin
             for (int i = SIG_START; i < SIG_END; i=i+4)
                 $fwrite(fd, "%x\n", {RAM_MEM.RAM[i+3],RAM_MEM.RAM[i+2],RAM_MEM.RAM[i+1],RAM_MEM.RAM[i]});
             $fclose(fd);
         end
+
+        if (META_PATH != "") begin
+            meta_fd = $fopen(META_PATH, "w");
+            $fwrite(meta_fd, "{\"exit\": \"%0s\", \"cycles\": %0d, \"retired\": %0d}\n",
+                    tohost_written ? "tohost" : "timeout", cycles, retired);
+            $fclose(meta_fd);
+        end
+
         $display("# %t END OF SIMULATION",$time);
     end
 

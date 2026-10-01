@@ -7,6 +7,8 @@ from multiprocessing import cpu_count
 import riscof.utils as utils
 from riscof.pluginTemplate import pluginTemplate
 
+from rs5_verilator import coverage_args_from_env, verilator_cmd
+
 logger = logging.getLogger()
 
 class rs5(pluginTemplate):
@@ -55,16 +57,8 @@ class rs5(pluginTemplate):
             -I '+self.pluginpath+'/env/\
             -I ' + archtest_env + ' {2} -o {3} {4}'
         
-        # set up the simulation command
-        dut_dir = self.pluginpath + '/../../'
+        # the testbench is verilated once in build()
         self.obj_dir = os.path.join(self.work_dir, 'obj_dir')
-        self.verilatecmd = f'verilator --cc --exe --binary --timescale 1ns/1ns -j 0\
-            --Mdir {self.obj_dir}\
-            -I{dut_dir}/RingBuffer/rtl/\
-            -I{dut_dir}/rtl/\
-            -I{dut_dir}/sim/\
-            -I{dut_dir}/rtl/aes\
-            {dut_dir}/riscof/riscof_tb.sv'
 
     def build(self, isa_yaml, platform_yaml):
         # load the isa yaml as a dictionary in python.
@@ -75,46 +69,16 @@ class rs5(pluginTemplate):
 
         # '--isa' argument
         self.isa = 'rv' + self.xlen
-        if "I" not in ispec["ISA"]:
-            print("ISA should contain I.")
-            raise SystemExit(1)
-        if "M" in ispec["ISA"]:
-            self.verilatecmd += " -GMEnable=1\\'b1"
-        if "A" in ispec["ISA"]:
-            self.verilatecmd += " -GAEnable=1\\'b1"
-        if "C" in ispec["ISA"]:
-            self.verilatecmd += " -GCOMPRESSED=1\\'b1"
-        if "U" not in ispec["ISA"]:
-            print("ISA should contain U.")
-            raise SystemExit(1)
-        if "Zicond" in ispec["ISA"]:
-            self.verilatecmd += " -GZICONDEnable=1\\'b1"
-        if "Zicsr" not in ispec["ISA"]:
-            print("ISA should contain Zicsr.")
-            raise SystemExit(1)
-        if "Zihpm" in ispec["ISA"]:
-            self.verilatecmd += " -GHPMCOUNTEREnable=1\\'b1"
-        if "Zkne" in ispec["ISA"]:
-            self.verilatecmd += " -GZKNEEnable=1\\'b1"
-        if "Zcb" in ispec["ISA"]:
-            self.verilatecmd += " -GZCBEnable=1\\'b1"
-        if "Zbkb" in ispec["ISA"]:
-            self.verilatecmd += " -GZBKBEnable=1\\'b1"
-        if "Zknh" in ispec["ISA"]:
-            self.verilatecmd += " -GZKNHEnable=1\\'b1"
-
-        self.verilatecmd += " -GBRANCHPRED=1\\'b" + os.environ["BRANCHPRED"]
-        self.verilatecmd += " -GFORWARDING=1\\'b" + os.environ["FORWARDING"]
-        self.verilatecmd += " -GDUALPORT_MEM=1\\'b" + os.environ["DUALPORT_MEM"]
-        self.verilatecmd += " -GIQUEUE_SIZE=" + os.environ["IQUEUE_SIZE"]
-        self.verilatecmd += " -GDELAY_CYCLES=" + os.environ["DELAY_CYCLES"]
+        # RS5_COVERAGE=1 builds a coverage-instrumented model: each test then leaves a
+        # coverage.dat in its dut/ directory (see fuzzer/coverage_report.py)
+        self.verilatecmd = verilator_cmd(ispec["ISA"], self.obj_dir, coverage_args_from_env())
 
         self.compile_cmd = self.compile_cmd+' -mabi='+('lp64 ' if 64 in ispec['supported_xlen'] else 'ilp32 ')
 
         # compile the testbench once; per-test values are passed as plusargs
         if self.target_run:
-            logger.info("Verilating riscof_tb: " + self.verilatecmd)
-            subprocess.run(self.verilatecmd, shell=True, check=True)
+            logger.info("Verilating riscof_tb: " + " ".join(self.verilatecmd))
+            subprocess.run(self.verilatecmd, check=True)
 
     def runTests(self, testList):
         # Delete Makefile if it already exists.
@@ -177,7 +141,8 @@ class rs5(pluginTemplate):
                     +SIG_START={signature_start}\
                     +SIG_END={signature_end}\
                     +TOHOST_ADDR={tohost_addr}\
-                    +SIG_PATH={sig_file}'
+                    +SIG_PATH={sig_file}\
+                    +META_PATH=meta.json'
             else:
                 simcmd = 'echo "NO RUN"'
                 objcopycmd = ''
