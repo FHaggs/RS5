@@ -14,13 +14,39 @@ Nada aqui está implementado ainda, exceto o que aparece em "Estado atual".
 
 ### Trabalhos relacionados e o que tiramos deles
 
-| Trabalho | Ideia | O que aproveitamos | Crítica |
-|---|---|---|---|
-| **SimFuzz** (preprint) | corpus de bugs históricos, mutação por bloco sem tocar nas CTIs, filtro por similaridade sintática; *open-loop* | a importância de um corpus bom | ganhos pequenos sobre o PathFuzz; a hipótese de que similaridade sintática aproxima similaridade de estado nunca é validada; avalia com cobertura, embora critique cobertura; CTIs nunca mutadas |
-| **Cascade** | programas longos montados a partir de blocos básicos | composição de blocos | é o mais próximo da nossa ideia de blocos; diferenciar explicitamente |
-| **ProcessorFuzz** | feedback por transições de CSR, calculadas num simulador de ISA | transições de CSR como fonte de feedback | no RS5 o espaço de CSR é pequeno e satura; o valor está no cruzamento com o pipeline |
-| **DifuzzRTL** | cobertura por registradores de controle do RTL | arestas de estado de controle | — |
-| **MorFuzz**, SiliFuzz | morphing de instruções; fuzzing em silício sem cobertura | — | posicionar em relação a eles |
+Levantamento feito em 13/10/2026; detalhes e lacunas na seção 10.
+
+**Fuzzers de processador e seus sinais de feedback**
+
+| Trabalho | Ideia | Relação com este trabalho |
+|---|---|---|
+| **SimFuzz** (preprint, 2026) | corpus de bugs históricos, mutação por bloco sem tocar nas CTIs, filtro por similaridade sintática; *open-loop* | ganhos pequenos sobre o PathFuzz; a hipótese de que similaridade sintática aproxima similaridade de estado nunca é validada; avalia com cobertura, embora critique cobertura; CTIs nunca mutadas |
+| **Cascade** (USENIX Sec 2024) | programas longos montados a partir de blocos básicos; sem feedback de cobertura | o mais próximo da nossa ideia de blocos; achou bugs de **contadores de desempenho imprecisos** (Kronos, Rocket), a mesma classe dos desvios de HPM da seção 8 |
+| **DifuzzRTL** (S&P 2021) | a cada ciclo e **por módulo**, hash (XOR inspirado no AFL) dos **registradores de controle** escolhidos por análise estática; mapa de **estados** de 1 bit, sem transições nem buckets | antecessor da fonte 0. Diferenças: snapshot **global entre estágios**, sinais escolhidos e comprimidos por significado, sinais combinacionais (forwarding, tipo de hazard), **transições** + buckets |
+| **ProcessorFuzz** (HOST 2023) | transições de CSR entre instruções consecutivas, calculadas no **simulador de ISA** (Spike); sem instrumentar o RTL | antecessor da fonte 1. Diferenças: calculada no RTL, por evento, com **contexto do pipeline** e timing de interrupção. No RS5 o espaço de CSR sozinho é pequeno |
+| **WhisperFuzz** (USENIX Sec 2024) | transições de estado de microarquitetura extraídas do RTL como cobertura | objetivo diferente: vulnerabilidades de **timing** |
+| **MorFuzz** (USENIX Sec 2023) | morphing de instruções em tempo de execução; gera dependências RAW/WAW de propósito | gerador; a cobertura é estrutural |
+| **SpecDoctor**, **SurgeFuzz** (ICCAD 2023) | eventos de rollback do ROB; densidade de eventos anotados (fila cheia) | eventos de microarquitetura, mas para execução transiente / casos de canto dirigidos em cores fora de ordem |
+| **PCBleed** (tese MIT, 2024) | fuzzer guiado por **contadores de desempenho**, motivado pelo Zenbleed | antecessor da fonte 4. Parece mirar CPU caixa-preta (não confirmado); num core aberto podemos **medir** quanto o HPM perde em relação ao RTL |
+| **Fuzzilicon** (2025) | fuzzing x86 pós-silício guiado por microcódigo | argumenta que contadores são feedback "grosseiro e indireto": vira hipótese a testar na fonte 4 |
+| **TurboFuzz**, **Lyra** (2025), **SNAP** | laço de fuzzing inteiro em FPGA | sintetizam a instrumentação na FPGA; a fonte 4 usa só contadores visíveis ao software |
+| **MABFuzz** (DATE 2024), **ReFuzz** (NDSS 2026) | bandits para escolher testes; o MABFuzz pondera cobertura local × global | o mais próximo do score ponderado (6.7), mas com uma métrica só |
+| SiliFuzz | fuzzing em silício sem cobertura | — |
+
+**Avaliação de fuzzers e levantamentos**
+
+| Trabalho | O que traz |
+|---|---|
+| **Encarsia** (USENIX Sec 2025) | injeção automática de bugs (troca de sinais e condicionais quebradas, via Yosys, com prova formal de que o bug é observável). Resultados centrais: **DifuzzRTL e ProcessorFuzz acharam exatamente os mesmos bugs com a cobertura ligada e desligada**, e mais devagar com ela ligada; o **gerador pesa mais** que o feedback; os fuzzers falham em **casos de canto de microarquitetura**. Recomenda, como trabalho futuro, **feedback funcional de componentes de microarquitetura** (fila de emissão, ROB, previsor de desvio) |
+| **ChipFuzzer** (2026) | já usa o corpus de 90 bugs do Encarsia para comparar fuzzers |
+| **SoK "You Find What You Seek"** (2026, 52 fuzzers) | cataloga sinais de orientação; afirma que **não há estudo sistemático comparando vários sinais com o mesmo gerador e orçamento** e recomenda ablações de uma escolha por vez |
+| **SoK ARCUS** (2026) | "cobertura maior não necessariamente se correlaciona com detecção de bugs"; cita **contadores de desempenho** e **métricas híbridas** como direções futuras |
+
+**Posicionamento.** Nenhuma fonte é inédita isoladamente. O que não existe é a **comparação controlada**:
+vários sinais gravados no mesmo mapa segmentado, com o mesmo gerador e orçamento, avaliados por bugs
+injetados. O Encarsia mostrou que a cobertura **estrutural** não ajuda e pediu feedback **funcional de
+microarquitetura**; as fontes 0 e 1 são exatamente isso para um core em ordem, e as variantes estilo
+DifuzzRTL e ProcessorFuzz no mesmo mapa reproduzem o resultado deles no RS5.
 
 Corpus de bugs de outros cores (Rocket, BOOM, XiangShan) tem **pouco retorno** para o RS5: a maioria envolve RV64, FPU, Sv39 ou execução fora de ordem. O corpus mais valioso é o **histórico do próprio RS5** (fixes do Xkyber, `#56 bugfix`), que também serve para a avaliação.
 
@@ -29,6 +55,16 @@ Corpus de bugs de outros cores (Rocket, BOOM, XiangShan) tem **pouco retorno** p
 > Gerar programas pela **composição de blocos semânticos** (map, reduce, crc, aes...) e por **transformações que preservam a semântica**, guiado por um **feedback unificado estilo AFL** que combina arestas do pipeline, transições de trap/CSR e contadores de desempenho (HPM), e avaliado por **bugs reencontrados e injetados**, não por cobertura.
 
 Diferença em relação ao SimFuzz: em vez de manter o mutante sintaticamente perto da seed, geramos variantes **semanticamente equivalentes mas microarquiteturalmente diferentes**, com feedback em malha fechada e um oráculo que funciona mesmo onde não há modelo de referência.
+
+**Hipótese de pesquisa**, a partir do Encarsia (seção 1):
+
+> A cobertura estrutural (registradores de controle, transições de CSR) não ajuda a achar bugs, mas
+> feedback **funcional de microarquitetura** (hazards, forwarding, previsão de desvio, holds e traps no
+> contexto do pipeline) ajuda. Testamos isso num core em ordem, comparando os sinais lado a lado com o
+> mesmo gerador e orçamento, por bugs injetados.
+
+Um resultado negativo (nenhum sinal supera o fuzzing sem feedback) também é uma resposta válida, e
+estenderia o achado do Encarsia para um core em ordem e para sinais funcionais.
 
 ## 3. Blocos semânticos
 
@@ -459,24 +495,58 @@ Do lado do Python:
 
 **Métrica: bugs encontrados e tempo até detecção**, não cobertura (evita o argumento circular do SimFuzz).
 
-- **Bugs reais**: reverter fixes do histórico do RS5.
-- **Bugs injetados**: mutantes manuais em `decode.sv`/`execute.sv`/`CSRBank.sv` (forwarding errado, hazard faltando, kill esquecido) e/ou MCY; cuidado com mutantes equivalentes.
-- **Baselines**: gerador aleatório atual, riscv-dv, Cascade.
+### Bugs
+
+- **Injetados com o Encarsia** (preferência): mesmo método da literatura, com prova formal de que cada
+  bug é observável e um bug por design. Já suporta Ibex, Rocket e BOOM; para um core novo basta uma
+  configuração (fontes, módulo de topo, sinais observáveis). Pontos a verificar no RS5:
+  - o **Yosys não suporta todo SystemVerilog**, e o RS5 usa packages, structs packed, enums e `inside`.
+    Testar se `sv2v` + Yosys elaboram o RS5 (o Ibex tem as mesmas construções);
+  - o design com bug sai como Verilog transformado: conferir se os nomes internos usados pelas sondas
+    `bind` (`decoder1.hazard_rs1`, `CSRBank1.mstatus_mie`…) sobrevivem, ou religar as sondas.
+- **Plano B / complemento:** reverter fixes do histórico do RS5 e mutantes manuais em `decode.sv`,
+  `execute.sv` e `CSRBank.sv` (forwarding errado, hazard faltando, kill esquecido), ou MCY; cuidado com
+  mutantes equivalentes.
+- **Bugs suspeitos da seção 8**, se confirmados contra o Sail.
+
+### Desenho do experimento
+
+Lições do Encarsia aplicadas:
+
+1. **Controle sem feedback em todo experimento.** O Encarsia mostrou que ele pode empatar com fuzzers
+   guiados. No mapa segmentado ele sai de graça: todas as fontes gravam, nenhuma guia.
+2. **Gerador fixo** entre todas as variantes. O gerador pesa mais que o feedback, então qualquer mudança
+   nele contamina a comparação.
+3. **Tempo até a detecção**, não só "achou ou não", com **várias repetições** (sementes diferentes) e
+   teste estatístico. Diferenças pequenas só aparecem assim.
+4. **Orçamento igual** em tempo de relógio, com o custo de cada fonte medido (as sondas `bind` deixam a
+   simulação mais lenta).
+5. Separar bug **alcançado**, **disparado** e **detectado** (recomendação do SoK de 2026): um bug
+   disparado e não detectado é falha do oráculo, não do feedback.
+
+Comparação com outros fuzzers (gerador aleatório atual, riscv-dv, Cascade) é secundária: o foco é o
+feedback, com o gerador fixo.
 
 ### Ablação de feedback
 
-| Variante | Roda em |
-|---|---|
-| sem feedback (estilo SimFuzz) | sim + FPGA |
-| linha do Verilator (atual) | sim |
-| transições de CSR na ISA (estilo ProcessorFuzz) | sim |
-| arestas de pipeline (`bind`, limite superior) | sim |
-| arestas de pipeline + contexto privilegiado | sim |
-| **HPM + traps, contadores atuais** | sim + FPGA |
-| **HPM + traps, eventos de verificação novos** | sim + FPGA |
+| Variante | Papel | Roda em |
+|---|---|---|
+| sem feedback | **controle** (resultado do Encarsia) | sim + FPGA |
+| linha do Verilator (atual) | estrutural, referência | sim |
+| registradores de controle por módulo (estilo DifuzzRTL) | estrutural, reproduz o Encarsia | sim |
+| transições de CSR na ISA (estilo ProcessorFuzz) | estrutural/arquitetural, reproduz o Encarsia | sim |
+| arestas de pipeline (`bind`, limite superior) | **funcional de microarquitetura** | sim |
+| arestas de pipeline + contexto privilegiado | **funcional de microarquitetura** | sim |
+| **HPM + traps, contadores atuais** | funcional, visível ao software | sim + FPGA |
+| **HPM + traps, eventos de verificação novos** | funcional, visível ao software | sim + FPGA |
+
+A variante estilo DifuzzRTL exige a análise estática dos registradores que acionam muxes. Se ficar cara,
+uma aproximação documentada (registradores escolhidos por módulo ou por nome) serve como referência.
 
 Perguntas que a ablação responde:
 
+0. O resultado do Encarsia se repete no RS5 (cobertura estrutural ≈ sem feedback)? O feedback funcional
+   de microarquitetura muda isso?
 1. Qual fonte de feedback encontra quais classes de bug (hazard vs trap/interrupção)?
 2. Quanto da capacidade do sinal ideal (RTL) o sinal barato (HPM) preserva?
 3. Quais eventos de HPM fazem diferença? (recomendação de contadores para um core verificável)
@@ -492,21 +562,66 @@ Testar à mão contra o Sail antes de tudo. Se confirmados, entram no corpus de 
 
 ## 9. Roteiro
 
-1. Testes manuais dos achados da seção 8 contra o Sail; conferir o Sail com `csrr mhpmcounterN`.
+1. Testes manuais dos achados da seção 8 contra o Sail; conferir o Sail com `csrr mhpmcounterN`;
+   testar se `sv2v` + Yosys elaboram o RS5 (pré-requisito do Encarsia).
 2. Formato de bloco, extrator e ~10 kernels em C com variantes (só `seq`).
 3. Gerador por árvore com mutações e `feedback()` mantendo o corpus (substitui o placeholder).
 4. Trap handler no template + operadores `trap`, `interleave`, `call`, `branch`.
 5. Interface unificada: `fuzz_cov_part` com fontes 0 e 1; migrar o Verilator (fonte 2).
 6. Fontes 4 e 5 (HPM + traps lidos pelo programa), em simulação.
 7. Transformações equivalentes e oráculo metamórfico (Xkyber, interrupções).
-8. Experimento de ablação com bugs revertidos e injetados.
+8. Experimento de ablação com bugs injetados (Encarsia) e revertidos, incluindo o controle sem feedback e as variantes estilo DifuzzRTL e ProcessorFuzz.
 9. (Extensão) eventos de HPM para verificação; FPGA com loader residente.
 
 Os passos 1–5 já formam um TCC fechado; 6–8 o fortalecem; 9 é trabalho futuro se faltar tempo.
 
-## 10. Busca bibliográfica pendente
+## 10. Busca bibliográfica
 
-Antes de afirmar novidade, procurar: *hardware performance counter guided fuzzing*, *PMU feedback CPU fuzzing*, *post-silicon processor fuzzing*, *FPGA-accelerated processor fuzzing*, *metamorphic testing processors*, *CSR transition coverage*. Posicionar explicitamente em relação a Cascade, ProcessorFuzz, DifuzzRTL, MorFuzz, SiliFuzz e TheHuzz.
+Feita em 13/10/2026, com foco nas fontes de feedback. Resumo na seção 1.
+
+### Veredito por fonte
+
+| Fonte | Antecessor mais próximo | O que é nosso | Força para o TCC |
+|---|---|---|---|
+| 0 · pipeline | DifuzzRTL (estrutural, por módulo, estados); WhisperFuzz (timing) | transições entre estágios, compressão semântica, sinais combinacionais, buckets | **alta**: é o feedback funcional de microarquitetura que o Encarsia pede |
+| 1 · CSRs | ProcessorFuzz (ISA, por instrução) | RTL, por evento, contexto do pipeline, timing de interrupção | média; depende de o gerador produzir traps e escritas de CSR |
+| 4/5 · HPM e traps | PCBleed; crítica do Fuzzilicon | medir a perda contra o RTL num core aberto; contadores pensados para verificação | média, como pergunta de pesquisa |
+| mapa segmentado e ablação | nenhum (MABFuzz e ReFuzz combinam testes, não sinais) | comparação controlada de sinais, medida por bugs injetados | **contribuição principal** |
+
+### Pendências
+
+- **PCBleed:** confirmar alvo (silício x RTL), contadores usados, definição de novidade e resultados. O
+  PDF da tese devolveu limite de requisições (HTTP 429).
+- **Ler por inteiro os dois SoKs de 2026** (só foram lidas partes): podem conter comparações que mudem o
+  argumento de novidade.
+- **Referências clássicas de cobertura de pipeline**, citadas de memória e não conferidas: Mishra & Dutt
+  (cobertura de interações de pipeline, DATE) e o trabalho da IBM sobre cobertura de microarquitetura
+  (Ur & Yadin, DAC 1999).
+- **Osiris** (citado pelo ARCUS): usa contadores para observar efeitos colaterais; conferir a relação
+  com a fonte 4.
+- Ainda não buscados: *metamorphic testing processors* e *post-silicon processor fuzzing* além do
+  Fuzzilicon e do SiliFuzz.
+
+### Referências
+
+- Encarsia (USENIX Security 2025): https://www.usenix.org/conference/usenixsecurity25/presentation/bolcskei · código: https://github.com/comsec-group/encarsia
+- SoK "You Find What You Seek" (2026): https://arxiv.org/abs/2609.27300
+- SoK ARCUS (2026): https://arxiv.org/abs/2608.23933
+- DifuzzRTL (S&P 2021): https://lifeasageek.github.io/papers/jaewon-difuzzrtl.pdf
+- ProcessorFuzz (HOST 2023): https://arxiv.org/abs/2209.01789
+- WhisperFuzz (USENIX Security 2024): https://arxiv.org/abs/2402.03704
+- MorFuzz (USENIX Security 2023): https://www.usenix.org/system/files/sec23fall-prepub-7-xu-jinyan.pdf
+- SpecDoctor: https://lifeasageek.github.io/papers/jaewon-specdoctor.pdf
+- SurgeFuzz (ICCAD 2023): https://github.com/shioya-lab-public/surgefuzz
+- Cascade (USENIX Security 2024): https://www.usenix.org/system/files/usenixsecurity24-solt.pdf
+- PCBleed (tese MIT, 2024): https://dspace.mit.edu/handle/1721.1/156944
+- Fuzzilicon (2025): https://arxiv.org/html/2512.23438
+- TurboFuzz (2025): https://arxiv.org/abs/2509.10400 · Lyra (2025): https://arxiv.org/abs/2512.13686
+- MABFuzz (DATE 2024): https://arxiv.org/abs/2311.14594 · ReFuzz (NDSS 2026): https://arxiv.org/abs/2512.04436
+- ChipFuzzer / LLM-driven semantic test generation (2026): https://arxiv.org/abs/2607.10340
+- Fuzzing com contratos de vazamento, Verilator + guiado × não guiado (2025): https://arxiv.org/abs/2511.08443
+- SimFuzz (2026): https://arxiv.org/abs/2601.11838
+- Lista curada: https://github.com/forestfoxx/awesome-hardware-fuzzing
 
 ## Apêndice A: como o AFL funciona (mapa, arestas e buckets)
 
