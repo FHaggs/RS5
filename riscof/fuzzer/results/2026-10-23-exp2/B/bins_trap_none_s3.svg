@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="936" font-family="sans-serif" font-size="10">
+<rect width="100%" height="100%" fill="white"/>
+<text x="360.0" y="16" text-anchor="middle" font-size="13">Taxa de acerto dos bins (%) - trap_none_s3</text>
+<text x="224" y="35.0" text-anchor="end" dominant-baseline="middle">fq_full</text>
+<rect x="230" y="30" width="430.0" height="10" fill="#ff7f0e"/>
+<text x="664.0" y="35.0" dominant-baseline="middle">100</text>
+<text x="224" y="49.0" text-anchor="end" dominant-baseline="middle">fq_full_jump</text>
+<rect x="230" y="44" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="49.0" dominant-baseline="middle">0</text>
+<text x="224" y="63.0" text-anchor="end" dominant-baseline="middle">rollback_no_valid_fetch</text>
+<rect x="230" y="58" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="63.0" dominant-baseline="middle">0</text>
+<text x="224" y="77.0" text-anchor="end" dominant-baseline="middle">fetch_starved</text>
+<rect x="230" y="72" width="82.6" height="10" fill="#1f77b4"/>
+<text x="316.6" y="77.0" dominant-baseline="middle">19.2</text>
+<text x="224" y="91.0" text-anchor="end" dominant-baseline="middle">lock_rs1_unused</text>
+<rect x="230" y="86" width="1.6" height="10" fill="#1f77b4"/>
+<text x="235.6" y="91.0" dominant-baseline="middle">0.375</text>
+<text x="224" y="105.0" text-anchor="end" dominant-baseline="middle">lock_rs2_unused</text>
+<rect x="230" y="100" width="44.2" height="10" fill="#1f77b4"/>
+<text x="278.2" y="105.0" dominant-baseline="middle">10.3</text>
+<text x="224" y="119.0" text-anchor="end" dominant-baseline="middle">hazard_mem</text>
+<rect x="230" y="114" width="228.2" height="10" fill="#1f77b4"/>
+<text x="462.2" y="119.0" dominant-baseline="middle">53.1</text>
+<text x="224" y="133.0" text-anchor="end" dominant-baseline="middle">hazard_x_load</text>
+<rect x="230" y="128" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="133.0" dominant-baseline="middle">0</text>
+<text x="224" y="147.0" text-anchor="end" dominant-baseline="middle">hazard_x_store</text>
+<rect x="230" y="142" width="53.2" height="10" fill="#1f77b4"/>
+<text x="287.2" y="147.0" dominant-baseline="middle">12.4</text>
+<text x="224" y="161.0" text-anchor="end" dominant-baseline="middle">hazard_x_branch</text>
+<rect x="230" y="156" width="11.0" height="10" fill="#1f77b4"/>
+<text x="245.0" y="161.0" dominant-baseline="middle">2.56</text>
+<text x="224" y="175.0" text-anchor="end" dominant-baseline="middle">hazard_x_jalr</text>
+<rect x="230" y="170" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="175.0" dominant-baseline="middle">0</text>
+<text x="224" y="189.0" text-anchor="end" dominant-baseline="middle">hazard_x_op</text>
+<rect x="230" y="184" width="251.2" height="10" fill="#1f77b4"/>
+<text x="485.2" y="189.0" dominant-baseline="middle">58.4</text>
+<text x="224" y="203.0" text-anchor="end" dominant-baseline="middle">hazard_x_opimm</text>
+<rect x="230" y="198" width="335.9" height="10" fill="#1f77b4"/>
+<text x="569.9" y="203.0" dominant-baseline="middle">78.1</text>
+<text x="224" y="217.0" text-anchor="end" dominant-baseline="middle">hazard_x_system</text>
+<rect x="230" y="212" width="4.7" height="10" fill="#1f77b4"/>
+<text x="238.7" y="217.0" dominant-baseline="middle">1.09</text>
+<text x="224" y="231.0" text-anchor="end" dominant-baseline="middle">hazard_x_muldiv</text>
+<rect x="230" y="226" width="19.7" height="10" fill="#1f77b4"/>
+<text x="253.7" y="231.0" dominant-baseline="middle">4.59</text>
+<text x="224" y="245.0" text-anchor="end" dominant-baseline="middle">fwd_exec_in_hold</text>
+<rect x="230" y="240" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="245.0" dominant-baseline="middle">0</text>
+<text x="224" y="259.0" text-anchor="end" dominant-baseline="middle">fwd_memret_in_hold</text>
+<rect x="230" y="254" width="173.3" height="10" fill="#1f77b4"/>
+<text x="407.3" y="259.0" dominant-baseline="middle">40.3</text>
+<text x="224" y="273.0" text-anchor="end" dominant-baseline="middle">fwd_both_retire</text>
+<rect x="230" y="268" width="123.9" height="10" fill="#1f77b4"/>
+<text x="357.9" y="273.0" dominant-baseline="middle">28.8</text>
+<text x="224" y="287.0" text-anchor="end" dominant-baseline="middle">fwd_mixed_sources</text>
+<rect x="230" y="282" width="430.0" height="10" fill="#ff7f0e"/>
+<text x="664.0" y="287.0" dominant-baseline="middle">100</text>
+<text x="224" y="301.0" text-anchor="end" dominant-baseline="middle">hold_after_hold</text>
+<rect x="230" y="296" width="156.0" height="10" fill="#1f77b4"/>
+<text x="390.0" y="301.0" dominant-baseline="middle">36.3</text>
+<text x="224" y="315.0" text-anchor="end" dominant-baseline="middle">div_by_zero</text>
+<rect x="230" y="310" width="98.1" height="10" fill="#1f77b4"/>
+<text x="332.1" y="315.0" dominant-baseline="middle">22.8</text>
+<text x="224" y="329.0" text-anchor="end" dominant-baseline="middle">div_overflow</text>
+<rect x="230" y="324" width="0.4" height="10" fill="#1f77b4"/>
+<text x="234.4" y="329.0" dominant-baseline="middle">0.0875</text>
+<text x="224" y="343.0" text-anchor="end" dominant-baseline="middle">hazard_bubble_in_hold</text>
+<rect x="230" y="338" width="3.5" height="10" fill="#1f77b4"/>
+<text x="237.5" y="343.0" dominant-baseline="middle">0.812</text>
+<text x="224" y="357.0" text-anchor="end" dominant-baseline="middle">killed_in_hold</text>
+<rect x="230" y="352" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="357.0" dominant-baseline="middle">0</text>
+<text x="224" y="371.0" text-anchor="end" dominant-baseline="middle">irq_x_bubble</text>
+<rect x="230" y="366" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="371.0" dominant-baseline="middle">0</text>
+<text x="224" y="385.0" text-anchor="end" dominant-baseline="middle">irq_x_alu</text>
+<rect x="230" y="380" width="45.8" height="10" fill="#1f77b4"/>
+<text x="279.8" y="385.0" dominant-baseline="middle">10.7</text>
+<text x="224" y="399.0" text-anchor="end" dominant-baseline="middle">irq_x_load</text>
+<rect x="230" y="394" width="28.9" height="10" fill="#1f77b4"/>
+<text x="262.9" y="399.0" dominant-baseline="middle">6.71</text>
+<text x="224" y="413.0" text-anchor="end" dominant-baseline="middle">irq_x_store</text>
+<rect x="230" y="408" width="6.2" height="10" fill="#1f77b4"/>
+<text x="240.2" y="413.0" dominant-baseline="middle">1.45</text>
+<text x="224" y="427.0" text-anchor="end" dominant-baseline="middle">irq_x_branch</text>
+<rect x="230" y="422" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="427.0" dominant-baseline="middle">0</text>
+<text x="224" y="441.0" text-anchor="end" dominant-baseline="middle">irq_x_jal</text>
+<rect x="230" y="436" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="441.0" dominant-baseline="middle">0</text>
+<text x="224" y="455.0" text-anchor="end" dominant-baseline="middle">irq_x_jalr</text>
+<rect x="230" y="450" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="455.0" dominant-baseline="middle">0</text>
+<text x="224" y="469.0" text-anchor="end" dominant-baseline="middle">irq_x_mul</text>
+<rect x="230" y="464" width="30.4" height="10" fill="#1f77b4"/>
+<text x="264.4" y="469.0" dominant-baseline="middle">7.06</text>
+<text x="224" y="483.0" text-anchor="end" dominant-baseline="middle">irq_x_div</text>
+<rect x="230" y="478" width="29.8" height="10" fill="#1f77b4"/>
+<text x="263.8" y="483.0" dominant-baseline="middle">6.92</text>
+<text x="224" y="497.0" text-anchor="end" dominant-baseline="middle">irq_x_csr</text>
+<rect x="230" y="492" width="29.3" height="10" fill="#1f77b4"/>
+<text x="263.3" y="497.0" dominant-baseline="middle">6.81</text>
+<text x="224" y="511.0" text-anchor="end" dominant-baseline="middle">irq_x_sys</text>
+<rect x="230" y="506" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="511.0" dominant-baseline="middle">0</text>
+<text x="224" y="525.0" text-anchor="end" dominant-baseline="middle">irq_x_other</text>
+<rect x="230" y="520" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="525.0" dominant-baseline="middle">0</text>
+<text x="224" y="539.0" text-anchor="end" dominant-baseline="middle">irq_blocked_by_hold</text>
+<rect x="230" y="534" width="55.5" height="10" fill="#1f77b4"/>
+<text x="289.5" y="539.0" dominant-baseline="middle">12.9</text>
+<text x="224" y="553.0" text-anchor="end" dominant-baseline="middle">irq_pending_in_stall</text>
+<rect x="230" y="548" width="48.8" height="10" fill="#1f77b4"/>
+<text x="282.8" y="553.0" dominant-baseline="middle">11.3</text>
+<text x="224" y="567.0" text-anchor="end" dominant-baseline="middle">stall_in_hold</text>
+<rect x="230" y="562" width="25.6" height="10" fill="#1f77b4"/>
+<text x="259.6" y="567.0" dominant-baseline="middle">5.95</text>
+<text x="224" y="581.0" text-anchor="end" dominant-baseline="middle">stall_and_jump</text>
+<rect x="230" y="576" width="430.0" height="10" fill="#ff7f0e"/>
+<text x="664.0" y="581.0" dominant-baseline="middle">100</text>
+<text x="224" y="595.0" text-anchor="end" dominant-baseline="middle">stall_and_hazard</text>
+<rect x="230" y="590" width="388.5" height="10" fill="#ff7f0e"/>
+<text x="622.5" y="595.0" dominant-baseline="middle">90.3</text>
+<text x="224" y="609.0" text-anchor="end" dominant-baseline="middle">stall_and_fwd</text>
+<rect x="230" y="604" width="429.6" height="10" fill="#ff7f0e"/>
+<text x="663.6" y="609.0" dominant-baseline="middle">99.9</text>
+<text x="224" y="623.0" text-anchor="end" dominant-baseline="middle">stall_and_irq_ack</text>
+<rect x="230" y="618" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="623.0" dominant-baseline="middle">0</text>
+<text x="224" y="637.0" text-anchor="end" dominant-baseline="middle">exc_in_U</text>
+<rect x="230" y="632" width="169.6" height="10" fill="#1f77b4"/>
+<text x="403.6" y="637.0" dominant-baseline="middle">39.4</text>
+<text x="224" y="651.0" text-anchor="end" dominant-baseline="middle">exc_in_M</text>
+<rect x="230" y="646" width="213.2" height="10" fill="#1f77b4"/>
+<text x="447.2" y="651.0" dominant-baseline="middle">49.6</text>
+<text x="224" y="665.0" text-anchor="end" dominant-baseline="middle">mret</text>
+<rect x="230" y="660" width="333.0" height="10" fill="#1f77b4"/>
+<text x="567.0" y="665.0" dominant-baseline="middle">77.4</text>
+<text x="224" y="679.0" text-anchor="end" dominant-baseline="middle">ecall_U</text>
+<rect x="230" y="674" width="124.8" height="10" fill="#1f77b4"/>
+<text x="358.8" y="679.0" dominant-baseline="middle">29</text>
+<text x="224" y="693.0" text-anchor="end" dominant-baseline="middle">ecall_M</text>
+<rect x="230" y="688" width="111.8" height="10" fill="#1f77b4"/>
+<text x="345.8" y="693.0" dominant-baseline="middle">26</text>
+<text x="224" y="707.0" text-anchor="end" dominant-baseline="middle">illegal_csr</text>
+<rect x="230" y="702" width="112.3" height="10" fill="#1f77b4"/>
+<text x="346.3" y="707.0" dominant-baseline="middle">26.1</text>
+<text x="224" y="721.0" text-anchor="end" dominant-baseline="middle">illegal_mret</text>
+<rect x="230" y="716" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="721.0" dominant-baseline="middle">0</text>
+<text x="224" y="735.0" text-anchor="end" dominant-baseline="middle">illegal_other</text>
+<rect x="230" y="730" width="56.1" height="10" fill="#1f77b4"/>
+<text x="290.1" y="735.0" dominant-baseline="middle">13</text>
+<text x="224" y="749.0" text-anchor="end" dominant-baseline="middle">misaligned_ldst</text>
+<rect x="230" y="744" width="105.9" height="10" fill="#1f77b4"/>
+<text x="339.9" y="749.0" dominant-baseline="middle">24.6</text>
+<text x="224" y="763.0" text-anchor="end" dominant-baseline="middle">ebreak</text>
+<rect x="230" y="758" width="39.0" height="10" fill="#1f77b4"/>
+<text x="273.0" y="763.0" dominant-baseline="middle">9.06</text>
+<text x="224" y="777.0" text-anchor="end" dominant-baseline="middle">exc_after_hold</text>
+<rect x="230" y="772" width="0.0" height="10" fill="#d62728"/>
+<text x="234.0" y="777.0" dominant-baseline="middle">0</text>
+<text x="224" y="791.0" text-anchor="end" dominant-baseline="middle">csrw_mstatus_irq_pending</text>
+<rect x="230" y="786" width="29.3" height="10" fill="#1f77b4"/>
+<text x="263.3" y="791.0" dominant-baseline="middle">6.81</text>
+<text x="224" y="805.0" text-anchor="end" dominant-baseline="middle">bp_rollback</text>
+<rect x="230" y="800" width="171.4" height="10" fill="#1f77b4"/>
+<text x="405.4" y="805.0" dominant-baseline="middle">39.9</text>
+<text x="224" y="819.0" text-anchor="end" dominant-baseline="middle">bp_confirmed</text>
+<rect x="230" y="814" width="430.0" height="10" fill="#ff7f0e"/>
+<text x="664.0" y="819.0" dominant-baseline="middle">100</text>
+<text x="224" y="833.0" text-anchor="end" dominant-baseline="middle">branch_taken_unpredicted</text>
+<rect x="230" y="828" width="191.1" height="10" fill="#1f77b4"/>
+<text x="425.1" y="833.0" dominant-baseline="middle">44.4</text>
+<text x="224" y="847.0" text-anchor="end" dominant-baseline="middle">jalr_taken</text>
+<rect x="230" y="842" width="173.8" height="10" fill="#1f77b4"/>
+<text x="407.8" y="847.0" dominant-baseline="middle">40.4</text>
+<text x="224" y="861.0" text-anchor="end" dominant-baseline="middle">jal_taken_unacked</text>
+<rect x="230" y="856" width="9.4" height="10" fill="#1f77b4"/>
+<text x="243.4" y="861.0" dominant-baseline="middle">2.17</text>
+<text x="224" y="875.0" text-anchor="end" dominant-baseline="middle">csr_read_counter</text>
+<rect x="230" y="870" width="173.2" height="10" fill="#1f77b4"/>
+<text x="407.2" y="875.0" dominant-baseline="middle">40.3</text>
+<text x="224" y="889.0" text-anchor="end" dominant-baseline="middle">csrw_mscratch</text>
+<rect x="230" y="884" width="147.5" height="10" fill="#1f77b4"/>
+<text x="381.5" y="889.0" dominant-baseline="middle">34.3</text>
+<text x="224" y="903.0" text-anchor="end" dominant-baseline="middle">csrw_mie</text>
+<rect x="230" y="898" width="283.9" height="10" fill="#1f77b4"/>
+<text x="517.9" y="903.0" dominant-baseline="middle">66</text>
+<text x="224" y="917.0" text-anchor="end" dominant-baseline="middle">csrw_mstatus</text>
+<rect x="230" y="912" width="430.0" height="10" fill="#ff7f0e"/>
+<text x="664.0" y="917.0" dominant-baseline="middle">100</text>
+</svg>

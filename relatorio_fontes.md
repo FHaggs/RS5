@@ -1,6 +1,7 @@
 # Relatório: comportamento do mapa e das fontes de feedback no RS5
 
-Data: 2026-10-22. Branch `cov-tests`. Dados brutos e gráficos em
+Data: 2026-10-22. Continuação em [relatorio_fontes_2.md](relatorio_fontes_2.md) (mutador × sinal,
+gerador com traps, bug natural da interrupção). Branch `cov-tests`. Dados brutos e gráficos em
 [riscof/fuzzer/results/2026-10-22-fontes/](riscof/fuzzer/results/2026-10-22-fontes/)
 (`report_main.md` para as 7 execuções principais, `report_cost.md` para as de custo, scripts
 `run_exp.sh` e `run_cost.sh` para repetir). As fontes estão descritas em

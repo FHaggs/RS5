@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 import toolchain
 from coverage import parse_coverage_dat
-from feedback import RTL_SOURCES, parse_fuzz_cov, src_mask
+from feedback import RTL_SOURCES, derive_coarse, parse_fuzz_cov, src_mask
 
 
 @dataclass
@@ -160,6 +160,10 @@ def run_case(case_id, program, twice=False):
         t = time.perf_counter()
         if rtl_sources:
             res.hits, res.raws, res.scalars, res.collided = parse_fuzz_cov(os.path.join(case_dir, 'fuzz_cov'), rtl_sources)
+            if 3 in cfg.record and 0 in rtl_sources:
+                h3, r3 = derive_coarse(res.hits, res.raws)
+                res.hits.update(h3)
+                res.raws.update(r3)
             if twice:
                 # calibração: roda o RS5 de novo e compara as posições (fontes do RTL)
                 again = os.path.join(case_dir, 'again')

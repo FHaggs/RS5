@@ -220,6 +220,23 @@ não há `>> 1`. Eventos durante `stall` são ignorados (o execute os mascara).
 
 ---
 
+## 3b. Fonte 3: arestas grossas do pipeline (derivada)
+
+**Pergunta:** a mesma da fonte 0, mas com um snapshot de 20 bits que guarda só os **eventos**:
+hazard (qualquer), forwarding (qualquer), classe em execute, `hazard`/`killed`/`bp_taken`/`illegal`
+da instrução em execute, hold (mul ou div ocupado), `jump`, `rollback`, `exc`, `mret`, `irq_ack`,
+`stall`, `irq_pend`, modo U, `mie`. Saem: nível da fila, origem do forwarding, sub-estados de
+mul/div, classes de mem/retire, `dec_valid`/`jumping`/`bp_take`.
+
+**Onde:** só em Python (`derive_coarse` em `feedback.py`), calculada no fim do caso a partir das
+chaves originais da fonte 0 gravadas no `fuzz_cov_0.txt`. Cada aresta fina `(prev, cur, run)` vira
+`(coarse(prev), coarse(cur), bucket(run))`; arestas cujo estado grosso não muda são descartadas; a
+contagem é a soma das finas. Não custa nada no RTL, mas exige a fonte 0 em `--record`.
+
+**Para quê:** testar a hipótese de que a fonte 0 é "fina demais" (novidade barata em combinações
+de fila × forwarding × classe) e que a decisão de admissão deveria olhar um espaço menor
+(`--guide 3`), mantendo a fonte 0 como medida.
+
 ## 4. Fonte 2: cobertura de linha do Verilator
 
 **Pergunta:** "esta linha/branch/cover do RTL foi avaliada?" Métrica estrutural, linha de base
@@ -302,9 +319,28 @@ python3 fuzzer/feedback_report.py w_none w_pipe ...                             
 
 - `--record`: o que é gravado (RTL via `+FUZZ_SRC`, Verilator via o build). `none` mede o custo.
 - `--guide`: subconjunto de `--record` que decide corpus e energia. `""` = sem feedback.
-- `--schedule novelty|rarity`: energia 1 para quem trouxe novidade, ou `Σ peso/freq`.
+- `--score buckets|positions`: o que conta como novidade para admitir no corpus. `buckets`
+  (padrão): posição nova vale 2 e bucket novo vale 1; `positions`: só posições novas.
+- `--corpus novelty|all`: `novelty` (padrão) admite quem trouxe novidade numa fonte de `--guide`;
+  `all` admite todo caso que passa (controle "corpus aleatório": mesma taxa de mutação, pais sem sinal).
+- `--schedule novelty|rarity|uniform`: energia 1 para quem trouxe novidade; `Σ peso/freq` sobre as
+  posições atingidas; ou 1 para todos (sorteio uniforme de pais).
+- `--mutate-p`: fração dos casos gerados por mutação de um pai quando há corpus (padrão 0,8).
+- `--traps`: instala o tratador de trap no template e habilita os blocos `trap`, `irq` e `umode` do
+  gerador (x28..x30 passam a ser do tratador). Ver `program.py` e `generator.py`.
 - `--calibrate K`: a cada K casos, roda o RS5 duas vezes e registra posições instáveis.
 - `--delay-cycles`, `--iqueue-size`, `--branchpred`, `--forwarding`: configuração do core.
+
+### Gerador com traps (`--traps`)
+
+| Bloco | O que gera | O que o tratador faz |
+|---|---|---|
+| `trap` | 1–3 exceções em M: `ecall`, `ebreak`, palavra ilegal, escrita em CSR só de leitura, load/store desalinhado, `jalr` para endereço desalinhado | registra `(mcause, mepc)` no `fuzz_traps` (dentro da assinatura), faz `mepc += 4`, `mret` |
+| `irq` | liga `mie.MTIE` e `mstatus.MIE` (MTIP=1 desde o reset), 1–3 instruções, desliga `MIE`; em 20% liga só um dos bits | registra `(mcause, 0)`, limpa `MTIE`, `mret`. `mepc` não é registrado porque RS5 e Sail aceitam a interrupção em instruções diferentes |
+| `umode` | desliga MIE/MPIE/MTIE, `mret` para U, 2–6 operações sem CSR (30%: uma leitura de CSR, que é ilegal em U), `ecall` | sempre volta em M (`MPP=M`), então o `ecall` encerra o trecho em U |
+
+Leituras que não são portáveis entre RS5 e Sail e ficam fora do gerador com traps: `mepc` (depende de
+onde a interrupção foi aceita) e `mtval` (instrução ilegal: RS5 grava a instrução, Sail grava 0).
 
 Custo: as sondas são compiladas sempre, mas só executam com `+FUZZ_COV`; `+FUZZ_SRC` liga cada
 fonte. A fonte 2 exige o build instrumentado (`obj_dir` separado quando se alterna).

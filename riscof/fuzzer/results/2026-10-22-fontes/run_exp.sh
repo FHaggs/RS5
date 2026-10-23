@@ -3,7 +3,7 @@
 set -u
 cd /sim/pedro.fam/RS5/riscof
 source fuzzer/env.sh
-EXP=/tmp/claude-1695000639/-sim-pedro-fam-RS5/49b5b087-b9ae-4024-9c45-5f3148de84c7/scratchpad/exp
+EXP=<scratch>/exp
 mkdir -p $EXP
 N=8000
 # modelos (um com cobertura do Verilator, outro sem), compartilhados por symlink

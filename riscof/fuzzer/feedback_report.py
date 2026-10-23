@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import feedback as fb  # noqa: E402
 
-SRC_ORDER = (0, 1, 2, 6)
+SRC_ORDER = (0, 1, 2, 3, 6)
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +145,34 @@ def svg_bars(items, title, width=720, bar=14):
     return '\n'.join(out)
 
 
+def svg_stacked(items, title, legend, width=720, bar=18):
+    """items: [(label, [v1, v2, ...])] barras horizontais empilhadas; legend: [(nome, cor)]."""
+    L = 230
+    height = 44 + bar * len(items) + 10
+    vmax = max((sum(v) for _, v in items), default=1) or 1
+    out = ['<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" font-family="sans-serif" font-size="10">'.format(width, height),
+           '<rect width="100%" height="100%" fill="white"/>',
+           '<text x="{}" y="16" text-anchor="middle" font-size="13">{}</text>'.format(width / 2, title)]
+    x = L
+    for name, color in legend:
+        out.append('<rect x="{}" y="22" width="10" height="10" fill="{}"/>'.format(x, color))
+        out.append('<text x="{}" y="31">{}</text>'.format(x + 13, name))
+        x += 13 + 7 * len(name) + 14
+    for i, (label, vals) in enumerate(items):
+        y = 42 + bar * i
+        out.append('<text x="{}" y="{}" text-anchor="end" dominant-baseline="middle">{}</text>'.format(L - 6, y + bar / 2, label))
+        x = L
+        for v, (_, color) in zip(vals, legend):
+            w = (width - L - 70) * v / vmax
+            out.append('<rect x="{:.1f}" y="{}" width="{:.1f}" height="{}" fill="{}"/>'.format(x, y + 2, w, bar - 4, color))
+            if w > 24:
+                out.append('<text x="{:.1f}" y="{}" fill="#222" dominant-baseline="middle">{}</text>'.format(x + 3, y + bar / 2, v))
+            x += w
+        out.append('<text x="{:.1f}" y="{}" dominant-baseline="middle">{}</text>'.format(x + 4, y + bar / 2, sum(vals)))
+    out.append('</svg>')
+    return '\n'.join(out)
+
+
 # ---------------------------------------------------------------------------
 # métricas
 # ---------------------------------------------------------------------------
@@ -197,7 +225,7 @@ def fmt(x, nd=1):
 # relatório
 # ---------------------------------------------------------------------------
 
-def report(runs, out_dir, window):
+def report(runs, out_dir, window, baseline=()):
     os.makedirs(out_dir, exist_ok=True)
     md = []
     w = md.append
@@ -447,6 +475,38 @@ def report(runs, out_dir, window):
             w(md_table(['execução', 'posições', 'só nesta execução', '% da união'], rows))
             w('')
 
+    # ---- 9c. arestas exclusivas em relação a uma referência ----
+    if baseline:
+        w('## 9c. Posições exclusivas em relação à referência\n')
+        base_runs = [r for r in runs if r.name in baseline]
+        w('Referência: a união das posições de {} ({} casos). Para cada execução, quantas das suas posições '
+          'nenhum programa da referência atingiu. Uma execução que faz parte da referência é comparada com a '
+          'união das **outras** execuções de referência.\n'.format(
+              ', '.join(r.name for r in base_runs), sum(r.n for r in base_runs)))
+        for src in SRC_ORDER:
+            sets = {r.name: set(x['idx'] for x in r.map['regions'].get(str(src), {'rows': []})['rows']) for r in runs}
+            if not any(sets.values()):
+                continue
+            rows, items = [], []
+            for r in runs:
+                if str(src) not in r.map['regions']:
+                    continue
+                ref = set().union(*[sets[b.name] for b in base_runs if b.name != r.name]) if base_runs else set()
+                mine = sets[r.name]
+                excl = mine - ref
+                freq = {x['idx']: x['freq'] for x in r.map['regions'][str(src)]['rows']}
+                once = sum(1 for i in excl if freq.get(i) == 1)
+                tag = ' (ref.)' if r.name in baseline else ''
+                rows.append([r.name + tag, len(mine), len(mine & ref), len(excl), '{:.1f}%'.format(pct(len(excl), len(mine))), once])
+                items.append((r.name + tag, [len(mine & ref), len(excl)]))
+            w('### Fonte {} ({})\n'.format(src, fb.SOURCES[src].name))
+            w(md_table(['execução', 'posições', 'também na referência', 'exclusivas', '% exclusivas', 'exclusivas vistas 1x'], rows))
+            name = 'exclusive_src{}.svg'.format(src)
+            with open(os.path.join(out_dir, name), 'w') as f:
+                f.write(svg_stacked(items, 'Fonte {}: posições compartilhadas com a referência e exclusivas'.format(src),
+                                    [('na referência', '#9ecae1'), ('exclusivas', '#fc8d59')]))
+            w('\n![]({})\n'.format(name))
+
     # ---- 10. gerador ----
     w('## 10. Gerador e corpus\n')
     rows = []
@@ -457,7 +517,8 @@ def report(runs, out_dir, window):
         rnd = [c for c in r.cases if not (c['spec'] or {}).get('op')]
         def newsum(cs, src):
             return sum(c['new'].get(str(src), [0, 0])[0] for c in cs)
-        rows.append([r.name, r.cases[-1]['corpus'] if r.cases else 0, kept, len(rnd), len(mut),
+        g = r.run.get('generator', {})
+        rows.append([r.name + (' traps' if g.get('traps') else ''), r.cases[-1]['corpus'] if r.cases else 0, kept, len(rnd), len(mut),
                      ' '.join('{}={}'.format(k, v) for k, v in ops.most_common()),
                      '{:.2f} / {:.2f}'.format(newsum(rnd, 0) / max(len(rnd), 1), newsum(mut, 0) / max(len(mut), 1)),
                      '{:.2f} / {:.2f}'.format(newsum(rnd, 6) / max(len(rnd), 1), newsum(mut, 6) / max(len(mut), 1))])
@@ -496,10 +557,11 @@ def main():
     p.add_argument('work_dirs', nargs='+')
     p.add_argument('-o', '--out', default=None, help='output directory (default: <first work dir>/report)')
     p.add_argument('--window', type=int, default=100)
+    p.add_argument('--baseline', default='', help='comma-separated run names used as the reference for exclusive positions')
     args = p.parse_args()
     runs = [Run(d) for d in args.work_dirs]
     out = args.out or os.path.join(args.work_dirs[0], 'report')
-    print(report(runs, out, args.window))
+    print(report(runs, out, args.window, set(x for x in args.baseline.split(',') if x)))
 
 
 if __name__ == '__main__':

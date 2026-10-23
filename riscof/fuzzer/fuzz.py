@@ -59,7 +59,12 @@ def parse_args():
     p.add_argument('--record', default='all', help='sources to record: all | none | 0,1,2,6,7')
     p.add_argument('--guide', default='', help='sources that decide corpus/energy ("" = no feedback)')
     p.add_argument('--weights', default='', help='energy weight per source, e.g. 0=1,6=3')
-    p.add_argument('--schedule', choices=('novelty', 'rarity'), default='rarity')
+    p.add_argument('--schedule', choices=('novelty', 'rarity', 'uniform'), default='rarity',
+                   help='parent energy: 1 for cases with novelty, sum(weight/freq) over hit positions, or 1 for all')
+    p.add_argument('--score', choices=('buckets', 'positions'), default='buckets',
+                   help='what counts as novelty for corpus admission: new positions and new buckets, or positions only')
+    p.add_argument('--corpus', choices=('novelty', 'all'), default='novelty',
+                   help='corpus admission: cases with novelty in a guiding source, or every passing case (random-corpus control)')
     p.add_argument('--no-verilator-cov', dest='verilator_cov', action='store_false',
                    help='build without --coverage (source 2 unavailable, faster)')
     p.add_argument('--trace', action='store_true', help='write the RS5Debug trace per case (+TRACE, slow)')
@@ -67,6 +72,8 @@ def parse_args():
     p.add_argument('--generator', choices=('simple', 'placeholder'), default='simple')
     p.add_argument('--blocks', default='3,8', help='min,max blocks per program')
     p.add_argument('--mutate-p', type=float, default=0.8, help='fraction of cases mutated from the corpus')
+    p.add_argument('--traps', action='store_true', help='trap handler + trap/irq/umode blocks (reserves x28..x30)')
+    p.add_argument('--kinds', default='', help='block kinds to generate (default: all for the generator mode)')
     # core configuration (same variables as riscof/Makefile; defaults in CORE_DEFAULTS)
     for var, default in CORE_DEFAULTS.items():
         p.add_argument('--' + var.lower().replace('_', '-'), default=os.environ.get(var, default))
@@ -231,6 +238,8 @@ def main():
     guide = FeedbackConfig.parse_sources(args.guide)
     if not args.verilator_cov:
         record = record - {2}
+    if 3 in record and 0 not in record:
+        raise SystemExit('source 3 is derived from source 0: add 0 to --record')
     if not guide <= record:
         raise SystemExit('--guide must be a subset of --record')
     weights = {}
@@ -239,21 +248,25 @@ def main():
             k, v = item.split('=')
             weights[int(k)] = float(v)
     fb_cfg = FeedbackConfig(record=record, guide=guide, weight=weights, schedule=args.schedule,
-                            verilator_cov=args.verilator_cov)
+                            verilator_cov=args.verilator_cov, score=args.score)
 
     scratch = scratch_dir(args.work_dir)
     cfg = RunConfig(isa=isa, model=model, scratch=scratch, max_cycles=args.max_cycles, keep=args.keep,
                     record=record, verilator_cov=args.verilator_cov, trace=args.trace)
     core = ' '.join('{}={}'.format(v, os.environ[v]) for v in CORE_DEFAULTS)
-    print('[fuzz] ISA {}  jobs {}  {}  core: {}'.format(isa, args.jobs, fb_cfg.describe(), core))
+    print('[fuzz] ISA {}  jobs {}  {}  corpus={} traps={}  core: {}'.format(
+        isa, args.jobs, fb_cfg.describe(), args.corpus, args.traps, core))
     with open(os.path.join(args.work_dir, 'run.json'), 'w') as f:
         json.dump({'args': vars(args), 'isa': isa, 'core': {v: os.environ[v] for v in CORE_DEFAULTS},
                    'feedback': {'record': sorted(record), 'guide': sorted(guide), 'schedule': args.schedule,
-                                'weights': weights}}, f, indent=2)
+                                'weights': weights, 'score': args.score, 'corpus': args.corpus},
+                   'generator': {'kind': args.generator, 'traps': args.traps, 'kinds': args.kinds,
+                                 'blocks': args.blocks, 'mutate_p': args.mutate_p}}, f, indent=2)
 
     lo, hi = (int(x) for x in args.blocks.split(','))
     if args.generator == 'simple':
-        gen = SimpleGenerator(isa, args.seed, lo, hi, args.mutate_p)
+        kinds = [k for k in args.kinds.split(',') if k] or None
+        gen = SimpleGenerator(isa, args.seed, lo, hi, args.mutate_p, traps=args.traps, kinds=kinds, corpus=args.corpus)
     else:
         gen = PlaceholderGenerator(isa, args.seed)
 

@@ -26,7 +26,7 @@ python3 fuzzer/fuzz.py --help                     # all options
 python3 fuzzer/fuzz.py --work-dir $PWD/w_none -n 2000 --seed 1 --guide ""     # control, no feedback
 python3 fuzzer/fuzz.py --work-dir $PWD/w_pipe -n 2000 --seed 1 --guide 0      # pipeline edges
 python3 fuzzer/fuzz.py --work-dir $PWD/w_bins -n 2000 --seed 1 --guide 0,6 --weights 6=3
-python3 fuzzer/feedback_report.py $PWD/w_none $PWD/w_pipe $PWD/w_bins -o $PWD/report
+python3 fuzzer/feedback_report.py $PWD/w_none $PWD/w_pipe $PWD/w_bins -o $PWD/report --baseline w_none
 ```
 
 Core knobs (`--delay-cycles`, `--iqueue-size`, `--branchpred`, `--forwarding`) are the same
@@ -40,10 +40,14 @@ Main options:
 | `--record all\|none\|0,1,2,6,7` | sources recorded and logged (RTL probes via `+FUZZ_COV`, Verilator via the build) |
 | `--guide 0,6` | subset of `--record` that decides corpus admission and energy (`""` = no feedback) |
 | `--weights 6=3` | energy weight per source |
-| `--schedule novelty\|rarity` | energy = 1 for novelty, or Σ weight/freq (rare positions pay more) |
+| `--schedule novelty\|rarity\|uniform` | parent energy = 1 for novelty, Σ weight/freq (rare positions pay more), or 1 for all |
+| `--score buckets\|positions` | novelty for corpus admission: new positions + new buckets, or positions only |
+| `--corpus novelty\|all` | admit cases with novelty, or every passing case (random-corpus control) |
 | `--calibrate K` | every K-th case runs twice on RS5; positions that differ are logged |
 | `--no-verilator-cov` | build without `--coverage` (no source 2, faster) |
-| `--generator simple\|placeholder`, `--blocks 3,8`, `--mutate-p 0.8` | generator |
+| `--generator simple\|placeholder`, `--blocks 3,8`, `--mutate-p 0.8`, `--kinds a,b,..` | generator |
+| `--traps` | trap handler in the template + `trap`/`irq`/`umode` blocks (see FONTES.md) |
+| `--trace` | write the RS5Debug instruction trace per case (`+TRACE`) |
 
 ## Outputs (`<work-dir>/`)
 

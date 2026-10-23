@@ -9,6 +9,7 @@ Fontes (ver FONTES.md para o detalhe de cada campo):
     0  arestas do pipeline com duração           RTL (fuzz_pipe_probe)   hash
     1  transições de trap/CSR com contexto       RTL (fuzz_csr_probe)    hash
     2  cobertura de linha/user do Verilator      Verilator (coverage.dat) id do ponto
+    3  arestas grossas do pipeline               derivada da fonte 0 em Python (derive_coarse)
     6  bins nomeados                             RTL (fuzz_pipe_probe)   índice fixo
     7  escalares (máximo por caso)               RTL (fuzz_pipe_probe)   índice fixo, sem bucket
 
@@ -134,6 +135,93 @@ def describe_edge(raw):
 
 
 # ---------------------------------------------------------------------------
+# Fonte 3: arestas grossas, derivadas da fonte 0 (sem RTL)
+# ---------------------------------------------------------------------------
+
+COARSE_FIELDS = (
+    ('hz',         1),   # qualquer hazard no decode
+    ('fwd',        1),   # algum operando veio por forwarding
+    ('xclass',     4),
+    ('x_hazard',   1), ('x_killed', 1), ('x_bp_taken', 1), ('x_illegal', 1),
+    ('hold',       1),   # multiplicador ou divisor ocupado
+    ('jump',       1), ('rollback', 1), ('exc', 1), ('mret', 1), ('irq_ack', 1),
+    ('stall',      1), ('irq_pend', 1),
+    ('umode',      1),   # privilégio U
+    ('mie',        1),
+)
+COARSE_BITS = sum(b for _, b in COARSE_FIELDS)
+
+
+def coarse_snapshot(snap):
+    """Projeta o snapshot de 40 bits nos 20 bits de evento (sem fila, forwarding detalhado,
+    sub-estados de mul/div, classes de mem/retire, dec_valid/jumping/bp_take)."""
+    f = decode_fields(snap, SNAPSHOT_FIELDS)
+    vals = [f['hz_rs1'] | f['hz_rs2'] | f['hz_mem'],
+            1 if (f['fwd1'] or f['fwd2']) else 0,
+            f['xclass'],
+            f['x_hazard'], f['x_killed'], f['x_bp_taken'], f['x_illegal'],
+            1 if (f['mul'] or f['div']) else 0,
+            f['jump'], f['rollback'], f['exc'], f['mret'], f['irq_ack'],
+            f['stall'], f['irq_pend'],
+            1 if f['priv'] != 3 else 0,
+            f['mie']]
+    out = 0
+    for (name, bits), v in zip(COARSE_FIELDS, vals):
+        out = (out << bits) | (v & ((1 << bits) - 1))
+    return out
+
+
+def _mix64(x):
+    x &= (1 << 64) - 1
+    x ^= x >> 30
+    x = (x * 0xbf58476d1ce4e5b9) & ((1 << 64) - 1)
+    x ^= x >> 27
+    x = (x * 0x94d049bb133111eb) & ((1 << 64) - 1)
+    x ^= x >> 31
+    return x
+
+
+def derive_coarse(hits, raws, bits=16):
+    """Fonte 3 a partir dos hits/raws da fonte 0 de um caso.
+
+    Cada aresta fina (prev, cur, run) vira a aresta grossa (coarse(prev), coarse(cur), bucket(run));
+    arestas cujo estado grosso não muda são descartadas. A contagem é a soma das finas (máx. 255).
+    Devolve (hits3, raws3) com chaves (3, idx)."""
+    hits3, raws3 = {}, {}
+    for (src, idx), count in hits.items():
+        if src != 0 or (0, idx) not in raws:
+            continue
+        raw = raws[(0, idx)]
+        run = raw & 0xffff
+        cur = coarse_snapshot((raw >> 16) & ((1 << 40) - 1))
+        prev = coarse_snapshot((raw >> 56) & ((1 << 40) - 1))
+        if cur == prev:
+            continue
+        key = (_mix64(prev) >> 1) ^ _mix64(cur) ^ (bucket(run) << 60)
+        i = _mix64(key) & ((1 << bits) - 1)
+        hits3[(3, i)] = min(255, hits3.get((3, i), 0) + count)
+        raws3.setdefault((3, i), (prev << 36) | (cur << 16) | run)
+    return hits3, raws3
+
+
+def describe_coarse(value):
+    f = decode_fields(value, COARSE_FIELDS)
+    parts = ['x=' + XCLASS[f['xclass']]]
+    for k in ('hz', 'fwd', 'x_hazard', 'x_killed', 'x_bp_taken', 'x_illegal', 'hold',
+              'jump', 'rollback', 'exc', 'mret', 'irq_ack', 'stall', 'irq_pend', 'umode', 'mie'):
+        if f[k]:
+            parts.append(k)
+    return ' '.join(parts)
+
+
+def describe_coarse_edge(raw):
+    run = raw & 0xffff
+    cur = (raw >> 16) & ((1 << COARSE_BITS) - 1)
+    prev = (raw >> 36) & ((1 << COARSE_BITS) - 1)
+    return '[{}] --{}c({})--> [{}]'.format(describe_coarse(prev), run, BUCKET_NAMES[bucket(run)], describe_coarse(cur))
+
+
+# ---------------------------------------------------------------------------
 # Fonte 1: transições de trap/CSR
 # ---------------------------------------------------------------------------
 
@@ -237,6 +325,8 @@ class Source:
             return describe_edge(raw)
         if self.id == 1 and raw is not None:
             return describe_csr_transition(raw)
+        if self.id == 3 and raw is not None:
+            return describe_coarse_edge(raw)
         if self.id == 6:
             return BINS[idx] if idx < len(BINS) else 'bin%d' % idx
         if self.id == 7:
@@ -250,10 +340,12 @@ SOURCES = {
     0: Source(0, 'pipe_edges', 16, True, True),
     1: Source(1, 'csr_trans', 12, True, True),
     2: Source(2, 'verilator', 0, False, True),
+    3: Source(3, 'pipe_coarse', 16, True, True),
     6: Source(6, 'bins', 6, False, True),
     7: Source(7, 'scalars', 0, False, False),
 }
 RTL_SOURCES = (0, 1, 6, 7)          # gravadas pelo fuzz_cov.sv (+FUZZ_COV/+FUZZ_SRC)
+DERIVED_SOURCES = {3: 0}            # fonte derivada -> fonte de que depende
 
 
 def src_mask(sources):
@@ -303,8 +395,9 @@ class FeedbackConfig:
     record: frozenset = frozenset(SOURCES)          # fontes gravadas (e salvas no log)
     guide: frozenset = frozenset()                  # fontes que decidem corpus/energia ({} = sem feedback)
     weight: dict = field(default_factory=dict)      # peso por fonte na energia (padrão 1.0)
-    schedule: str = 'rarity'                        # novelty | rarity
+    schedule: str = 'rarity'                        # novelty | rarity | uniform
     verilator_cov: bool = True                      # modelo instrumentado (fonte 2 disponível)
+    score: str = 'buckets'                          # 'buckets': posição nova = 2, bucket novo = 1; 'positions': só posições
 
     @staticmethod
     def parse_sources(text):
@@ -316,9 +409,9 @@ class FeedbackConfig:
         return frozenset(int(x) for x in text.split(','))
 
     def describe(self):
-        return 'record={} guide={} schedule={}'.format(
+        return 'record={} guide={} schedule={} score={}'.format(
             ','.join(map(str, sorted(self.record))), ','.join(map(str, sorted(self.guide))) or 'none',
-            self.schedule)
+            self.schedule, self.score)
 
 
 # ---------------------------------------------------------------------------
@@ -405,8 +498,13 @@ class FeedbackMap:
         for src in self.cfg.guide:
             w = self.cfg.weight.get(src, 1.0)
             n_pos, n_bkt = nov.count(src)
-            nov.score += w * (2 * n_pos + n_bkt)
-        nov.energy = energy if self.cfg.schedule == 'rarity' else (1.0 if nov.score > 0 else 0.0)
+            nov.score += w * (2 * n_pos + (n_bkt if self.cfg.score == 'buckets' else 0))
+        if self.cfg.schedule == 'rarity':
+            nov.energy = energy
+        elif self.cfg.schedule == 'uniform':
+            nov.energy = 1.0
+        else:
+            nov.energy = 1.0 if nov.score > 0 else 0.0
         return nov
 
     def describe(self, src, idx):
@@ -425,7 +523,7 @@ class FeedbackMap:
         data = {
             'cases': self.cases,
             'config': {'record': sorted(self.cfg.record), 'guide': sorted(self.cfg.guide),
-                       'schedule': self.cfg.schedule, 'weight': self.cfg.weight},
+                       'schedule': self.cfg.schedule, 'weight': self.cfg.weight, 'score': self.cfg.score},
             'regions': {},
             'scalars': {SCALARS[i] if i < len(SCALARS) else str(i): v for i, v in self.scalar_best.items()},
         }

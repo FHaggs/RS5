@@ -5,8 +5,11 @@ SimpleGenerator: programa = lista de blocos (kind, seed). Cada bloco é renderiz
 com os programas que trouxeram novidade e, quando há corpus, gera a maioria dos casos por
 mutação de um pai sorteado pela energia (raridade) que o fuzzer calculou.
 
-Regras do corpo (ver program.py): x31 é reservado (base de fuzz_mem), nada de traps
-(não há tratador: exceção vira hang), acessos sempre alinhados, laços sempre finitos.
+Regras do corpo (ver program.py): x31 é reservado (base de fuzz_mem), laços sempre finitos.
+Sem `traps`: nada pode gerar exceção (não há tratador: exceção vira hang) e acessos são
+alinhados. Com `traps`: o template instala o tratador, x28..x30 ficam reservados para ele e
+entram os blocos `trap` (exceções em M), `irq` (interrupção de timer) e `umode` (trecho em
+modo U terminado por ecall). Ver TRAP_KINDS.
 
 Interface:
     generate(case_id) -> Program
@@ -38,17 +41,22 @@ _CSR_COUNTERS = ('mcycle', 'minstret', 'mcycleh', 'minstreth', 'mhpmcounter3', '
                  'cycle', 'instret', 'hpmcounter3')
 
 BLOCK_KINDS = ('alu', 'mem', 'muldiv', 'branch', 'loop', 'jump', 'csr', 'mix')
+TRAP_KINDS = ('trap', 'irq', 'umode')
+BLOCK_KINDS_TRAPS = BLOCK_KINDS + TRAP_KINDS
 
 
 class _Ctx:
     """Estado compartilhado ao renderizar um programa."""
 
-    def __init__(self, has_m, has_csr):
+    def __init__(self, has_m, has_csr, traps=False):
         self.has_m = has_m
         self.has_csr = has_csr
+        self.traps = traps
+        self.max_reg = 27 if traps else 30     # x28..x30 pertencem ao tratador
         self.nlabel = 0
         self.recent = []        # últimos registradores escritos (para forçar forwarding)
         self.reserved = set()   # registradores em uso por laços
+        self.umode = False      # renderizando o corpo de um bloco umode (sem CSR/trap/irq)
 
     def label(self):
         self.nlabel += 1
@@ -74,6 +82,8 @@ class _Block:
             kind = 'alu'
         if kind == 'csr' and not ctx.has_csr:
             kind = 'alu'
+        if kind in TRAP_KINDS and (not ctx.traps or ctx.umode):
+            kind = 'alu'
         getattr(self, '_' + kind)(rng, ctx, lines)
         return lines
 
@@ -81,7 +91,7 @@ class _Block:
 
     @staticmethod
     def _pool(ctx):
-        return [r for r in range(1, 31) if r not in ctx.reserved]
+        return [r for r in range(1, ctx.max_reg + 1) if r not in ctx.reserved]
 
     def _src(self, rng, ctx):
         """Operando: metade das vezes um registrador escrito há pouco (forwarding/hazard)."""
@@ -225,7 +235,10 @@ class _Block:
                 op = rng.choice(('csrrwi', 'csrrsi', 'csrrci'))
                 self._emit(lines, ctx, '{} x{}, mscratch, {}'.format(op, rd, rng.randint(0, 31)), rd)
             elif p < 0.82:                             # leitura arquitetural
-                self._emit(lines, ctx, 'csrr x{}, {}'.format(rd, rng.choice(_CSR_ARCH)), rd)
+                # com traps: mepc depende de ONDE a interrupção foi aceita (difere entre RS5 e Sail) e
+                # mtval de instrução ilegal é a instrução no RS5 e 0 no Sail (a spec permite os dois)
+                arch = tuple(c for c in _CSR_ARCH if c not in ('mepc', 'mtval')) if ctx.traps else _CSR_ARCH
+                self._emit(lines, ctx, 'csrr x{}, {}'.format(rd, rng.choice(arch)), rd)
             elif p < 0.88:                             # leitura mascarada de mstatus/mie
                 csr = rng.choice(tuple(_CSR_MASKED))
                 self._emit(lines, ctx, 'csrr x{}, {}'.format(rd, csr), rd)
@@ -246,13 +259,108 @@ class _Block:
         self._emit(lines, ctx, 'li x{}, 0x{:x}'.format(rm, mask), rm)
         self._emit(lines, ctx, 'and x{0}, x{0}, x{1}'.format(rd, rm), rd)
 
+    # ---- blocos que dependem do tratador de trap ------------------------------------
+
+    _ILLEGAL_WORDS = (0x00000000, 0xffffffff, 0x0000707f, 0xc0001073)   # 0, -1, opcode reservado, csrw cycle
+
+    def _trap_one(self, rng, ctx, lines):
+        """Uma exceção em modo M; o tratador registra (mcause, mepc) e pula a instrução."""
+        p = rng.random()
+        if p < 0.15:
+            self._emit(lines, ctx, 'ecall')
+        elif p < 0.25:
+            self._emit(lines, ctx, 'ebreak')
+        elif p < 0.45:
+            self._emit(lines, ctx, '.word 0x{:08x}'.format(rng.choice(self._ILLEGAL_WORDS)))
+        elif p < 0.55:                                 # escrita em CSR só de leitura
+            self._emit(lines, ctx, 'csrrw x0, {}, x{}'.format(rng.choice(('cycle', 'instret', 'mvendorid', 'mhartid')), self._src(rng, ctx)))
+        elif p < 0.75:                                 # load desalinhado
+            op, size = rng.choice((('lw', 4), ('lh', 2), ('lhu', 2)))
+            off = rng.randrange(0, FUZZ_MEM_WORDS * 4 - 4, size) + rng.randrange(1, size)
+            rd = self._dst(rng, ctx)
+            self._emit(lines, ctx, '{} x{}, {}(x31)'.format(op, rd, off))   # rd não é escrito: não entra em recent
+        elif p < 0.9:                                  # store desalinhado
+            op, size = rng.choice((('sw', 4), ('sh', 2)))
+            off = rng.randrange(0, FUZZ_MEM_WORDS * 4 - 4, size) + rng.randrange(1, size)
+            self._emit(lines, ctx, '{} x{}, {}(x31)'.format(op, self._src(rng, ctx), off))
+        else:                                          # salto para endereço desalinhado
+            lab = self.__class__._lab(ctx)
+            self._emit(lines, ctx, 'la x29, {}'.format(lab))
+            self._emit(lines, ctx, 'addi x29, x29, 2')
+            self._emit(lines, ctx, 'jalr x0, 0(x29)')
+            lines.append(lab + ':')
+
+    def _trap(self, rng, ctx, lines):
+        for _ in range(rng.randint(1, 3)):
+            self._trap_one(rng, ctx, lines)
+            if rng.random() < 0.5:
+                self._alu_one(rng, ctx, lines)
+
+    def _irq(self, rng, ctx, lines):
+        """Pede a interrupção de timer (MTIP=1 desde o reset): liga MTIE e MIE, executa 1-3
+        instruções, desliga MIE. O tratador registra mcause e limpa MTIE. Em 20% dos casos só
+        um dos dois bits é ligado (nada acontece) para exercitar o caminho sem interrupção."""
+        p = rng.random()
+        if p < 0.8:
+            self._emit(lines, ctx, 'li x29, 0x80')
+            self._emit(lines, ctx, 'csrs mie, x29')
+        if p < 0.9:
+            self._emit(lines, ctx, 'csrsi mstatus, 8')
+        for _ in range(rng.randint(1, 3)):
+            k = rng.random()
+            if k < 0.4:
+                self._alu_one(rng, ctx, lines)
+            elif k < 0.7:
+                self._mem_one(rng, ctx, lines)
+            elif ctx.has_m:
+                self._muldiv_one(rng, ctx, lines)
+            else:
+                self._emit(lines, ctx, 'nop')
+        self._emit(lines, ctx, 'csrci mstatus, 8')
+
+    def _umode(self, rng, ctx, lines):
+        """Entra em modo U (MIE, MPIE e MTIE desligados), roda 2-6 operações sem CSR, e volta
+        a M com ecall (o tratador força MPP=M). Em 30% dos casos uma leitura de CSR em U gera
+        uma exceção de instrução ilegal; o resto do corpo segue em M."""
+        lab = self.__class__._lab(ctx)
+        self._emit(lines, ctx, 'li x29, 0x88')
+        self._emit(lines, ctx, 'csrc mstatus, x29')
+        self._emit(lines, ctx, 'li x29, 0x80')
+        self._emit(lines, ctx, 'csrc mie, x29')
+        self._emit(lines, ctx, 'li x29, 0x1800')
+        self._emit(lines, ctx, 'csrc mstatus, x29')
+        self._emit(lines, ctx, 'la x29, {}'.format(lab))
+        self._emit(lines, ctx, 'csrw mepc, x29')
+        self._emit(lines, ctx, 'mret')
+        lines.append(lab + ':')
+        ctx.umode = True
+        n = rng.randint(2, 6)
+        illegal_at = rng.randrange(n) if rng.random() < 0.3 else -1
+        for i in range(n):
+            if i == illegal_at:
+                rd = self._dst(rng, ctx)
+                self._emit(lines, ctx, 'csrr x{}, {}'.format(rd, rng.choice(('mscratch', 'mstatus', 'mepc'))))
+                continue
+            k = rng.random()
+            if k < 0.4:
+                self._alu_one(rng, ctx, lines)
+            elif k < 0.7:
+                self._mem_one(rng, ctx, lines)
+            elif k < 0.85 and ctx.has_m:
+                self._muldiv_one(rng, ctx, lines)
+            else:
+                self._branch(rng, ctx, lines)
+        ctx.umode = False
+        self._emit(lines, ctx, 'ecall')
+
     @staticmethod
     def _lab(ctx):
         return ctx.label()
 
 
 class SimpleGenerator:
-    def __init__(self, isa, seed=None, min_blocks=3, max_blocks=8, mutate_p=0.8):
+    def __init__(self, isa, seed=None, min_blocks=3, max_blocks=8, mutate_p=0.8,
+                 traps=False, kinds=None, corpus='novelty'):
         self.rng = random.Random(seed)
         self.has_m = 'M' in isa
         self.has_csr = 'Zicsr' in isa
@@ -260,6 +368,9 @@ class SimpleGenerator:
         self.rvtest_isa = 'RV32IM' if self.has_m else 'RV32I'
         self.min_blocks, self.max_blocks = min_blocks, max_blocks
         self.mutate_p = mutate_p
+        self.traps = traps
+        self.kinds = tuple(kinds) if kinds else (BLOCK_KINDS_TRAPS if traps else BLOCK_KINDS)
+        self.corpus_policy = corpus         # 'novelty': só casos com score > 0; 'all': todo caso que passa
         self.corpus = []            # [(spec, energy)]
         self.stats = {'random': 0, 'mutated': 0, 'kept': 0}
 
@@ -267,7 +378,7 @@ class SimpleGenerator:
 
     def _random_spec(self):
         n = self.rng.randint(self.min_blocks, self.max_blocks)
-        return {'blocks': [(self.rng.choice(BLOCK_KINDS), self.rng.getrandbits(32)) for _ in range(n)],
+        return {'blocks': [(self.rng.choice(self.kinds), self.rng.getrandbits(32)) for _ in range(n)],
                 'mem': self.rng.getrandbits(32), 'regs': self.rng.getrandbits(32)}
 
     def _mutate(self, spec, other=None):
@@ -276,10 +387,10 @@ class SimpleGenerator:
         new = {'blocks': blocks, 'mem': spec['mem'], 'regs': spec['regs']}
         if op == 'point' or (op == 'splice' and other is None):
             i = self.rng.randrange(len(blocks))
-            blocks[i] = (blocks[i][0] if self.rng.random() < 0.5 else self.rng.choice(BLOCK_KINDS),
+            blocks[i] = (blocks[i][0] if self.rng.random() < 0.5 else self.rng.choice(self.kinds),
                          self.rng.getrandbits(32))
         elif op == 'insert' and len(blocks) < 2 * self.max_blocks:
-            blocks.insert(self.rng.randint(0, len(blocks)), (self.rng.choice(BLOCK_KINDS), self.rng.getrandbits(32)))
+            blocks.insert(self.rng.randint(0, len(blocks)), (self.rng.choice(self.kinds), self.rng.getrandbits(32)))
         elif op == 'delete' and len(blocks) > 1:
             del blocks[self.rng.randrange(len(blocks))]
         elif op == 'swap' and len(blocks) > 1:
@@ -311,9 +422,9 @@ class SimpleGenerator:
         return rng.getrandbits(32)
 
     def _render(self, spec, case_id):
-        ctx = _Ctx(self.has_m, self.has_csr)
+        ctx = _Ctx(self.has_m, self.has_csr, self.traps)
         rreg = random.Random(spec['regs'])
-        lines = ['    li x{}, 0x{:08x}'.format(r, self._value(rreg)) for r in range(1, 31)]
+        lines = ['    li x{}, 0x{:08x}'.format(r, self._value(rreg)) for r in range(1, ctx.max_reg + 1)]
         for kind, seed in spec['blocks']:
             lines.append('    # block {} seed {:08x}'.format(kind, seed))
             lines.extend(_Block(kind, seed).render(ctx))
@@ -321,7 +432,7 @@ class SimpleGenerator:
         return Program(name='fz-{:06d}'.format(case_id), body='\n'.join(lines),
                        march=self.march, rvtest_isa=self.rvtest_isa,
                        mem_init=tuple(self._value(rmem) for _ in range(FUZZ_MEM_WORDS)),
-                       spec=spec)
+                       spec=spec, traps=self.traps)
 
     # ---- interface -------------------------------------------------------------
 
@@ -337,8 +448,9 @@ class SimpleGenerator:
         return self._render(spec, case_id)
 
     def feedback(self, program, result, novelty):
-        """Guarda no corpus os programas que trouxeram novidade nas fontes de `guide`."""
-        if novelty.score > 0 and result.status == 'pass':
+        """Guarda no corpus os programas que trouxeram novidade nas fontes de `guide`
+        (ou todos os que passaram, com corpus='all')."""
+        if result.status == 'pass' and (novelty.score > 0 or self.corpus_policy == 'all'):
             self.corpus.append((program.spec, novelty.energy))
             self.stats['kept'] += 1
 
