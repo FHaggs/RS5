@@ -59,6 +59,7 @@ def verilator_cmd(isa, obj_dir, extra_args=()):
         '-I' + RS5_ROOT + '/sim/',
         '-I' + RS5_ROOT + '/rtl/aes',
         RS5_ROOT + '/riscof/riscof_tb.sv',
+        RS5_ROOT + '/riscof/fuzz_cov.sv',      # feedback probes, bound into RS5 by riscof_tb
     ]
 
     for ext, param in EXTENSION_PARAMS:

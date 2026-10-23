@@ -28,6 +28,8 @@ def _describe(key):
 
 # Only points inside the core count; testbench, RAM, etc. are ignored
 DUT_SCOPE = '\x01h\x02riscof_tb.dut'
+# The feedback probes (fuzz_cov.sv) and the RS5Debug trace are bound inside the core: not DUT logic
+EXCLUDED_SCOPES = ('riscof_tb.dut.fuzz_', 'riscof_tb.dut.debug')
 
 
 def parse_coverage_dat(path, with_names=False, scope=DUT_SCOPE):
@@ -44,7 +46,7 @@ def parse_coverage_dat(path, with_names=False, scope=DUT_SCOPE):
                 continue
             end = line.rindex("'")
             key = line[3:end]
-            if scope not in key:
+            if scope not in key or any(x in key for x in EXCLUDED_SCOPES):
                 continue
             count = int(line[end + 1:])
             pid = _point_id(key)

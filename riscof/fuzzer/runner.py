@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 import toolchain
 from coverage import parse_coverage_dat
+from feedback import RTL_SOURCES, parse_fuzz_cov, src_mask
 
 
 @dataclass
@@ -22,6 +23,9 @@ class RunConfig:
     inst_limit: int = 100000  # Sail instruction limit
     proc_timeout: int = 120   # wall-clock limit for any subprocess (seconds)
     keep: bool = False        # keep passing case directories
+    record: frozenset = frozenset((0, 1, 2, 6, 7))   # feedback sources to record (see feedback.py)
+    verilator_cov: bool = True                        # model built with --coverage (source 2)
+    trace: bool = False                               # +TRACE: RS5Debug instruction trace per case
 
 
 @dataclass
@@ -32,8 +36,12 @@ class Result:
     detail: str = ''
     case_dir: str = ''        # kept for anything that is not a pass
     meta: dict = field(default_factory=dict)    # written by riscof_tb (+META_PATH)
-    hits: dict = field(default_factory=dict)    # coverage point id -> count
-    names: dict = None        # point id -> description, sent once per worker process
+    hits: dict = field(default_factory=dict)    # (source, idx) -> count   (all recorded sources)
+    raws: dict = field(default_factory=dict)    # (source, idx) -> raw key of the first hit (sources 0, 1)
+    scalars: dict = field(default_factory=dict) # source 7: idx -> max value in the case
+    collided: set = field(default_factory=set)  # (source, idx) hit by two different raw keys (hash collision)
+    unstable: list = None     # positions whose count differed between two runs (only with twice=True)
+    names: dict = None        # Verilator point id -> description, sent once per worker process
     times: dict = field(default_factory=dict)   # stage -> seconds
 
 
@@ -97,7 +105,7 @@ def _read_words(path):
         return None
 
 
-def run_case(case_id, program):
+def run_case(case_id, program, twice=False):
     global _names_sent
     cfg = _cfg
     res = Result(case_id=case_id, name=program.name, status='error')
@@ -121,15 +129,20 @@ def run_case(case_id, program):
         _run([toolchain.TRIPLET + '-objcopy', 'test.elf', 'test.bin', '-O', 'binary'], case_dir)
         res.times['compile'] = time.perf_counter() - t
 
-        # RS5: coverage.dat is written in the current directory (case_dir)
+        # RS5: coverage.dat (Verilator) and fuzz_cov_<src>.txt (probes) are written in case_dir
         t = time.perf_counter()
-        p = _run([cfg.model,
-                  '+SIG_START=' + syms['begin_signature'],
-                  '+SIG_END=' + syms['end_signature'],
-                  '+TOHOST_ADDR=' + syms['tohost'],
-                  '+SIG_PATH=dut.sig',
-                  '+META_PATH=meta.json',
-                  '+MAX_CYCLES=' + str(cfg.max_cycles)], case_dir)
+        rtl_sources = [s for s in cfg.record if s in RTL_SOURCES]
+        dut_args = ['+SIG_START=' + syms['begin_signature'],
+                    '+SIG_END=' + syms['end_signature'],
+                    '+TOHOST_ADDR=' + syms['tohost'],
+                    '+SIG_PATH=dut.sig',
+                    '+META_PATH=meta.json',
+                    '+MAX_CYCLES=' + str(cfg.max_cycles)]
+        if rtl_sources:
+            dut_args += ['+FUZZ_COV=fuzz_cov', '+FUZZ_SRC=' + str(src_mask(rtl_sources))]
+        if cfg.trace:
+            dut_args.append('+TRACE')
+        p = _run([cfg.model] + dut_args, case_dir)
         res.times['dut'] = time.perf_counter() - t
         if p.returncode != 0:
             res.detail = 'RS5 simulation failed:\n' + p.stderr[-2000:]
@@ -145,10 +158,24 @@ def run_case(case_id, program):
         sail_finished = 'SUCCESS' in p.stdout
 
         t = time.perf_counter()
-        res.hits, names = parse_coverage_dat(os.path.join(case_dir, 'coverage.dat'),
-                                             with_names=not _names_sent)
-        if names is not None:
-            res.names, _names_sent = names, True
+        if rtl_sources:
+            res.hits, res.raws, res.scalars, res.collided = parse_fuzz_cov(os.path.join(case_dir, 'fuzz_cov'), rtl_sources)
+            if twice:
+                # calibração: roda o RS5 de novo e compara as posições (fontes do RTL)
+                again = os.path.join(case_dir, 'again')
+                os.makedirs(again, exist_ok=True)
+                for f in ('test.bin',):
+                    shutil.copy(os.path.join(case_dir, f), again)
+                _run([cfg.model] + dut_args, again)
+                h2, _, s2, _ = parse_fuzz_cov(os.path.join(again, 'fuzz_cov'), rtl_sources)
+                res.unstable = sorted(k for k in set(res.hits) | set(h2) if res.hits.get(k) != h2.get(k))
+                res.unstable += sorted(('scalar', k) for k in set(res.scalars) | set(s2) if res.scalars.get(k) != s2.get(k))
+        if cfg.verilator_cov and 2 in cfg.record:
+            vhits, names = parse_coverage_dat(os.path.join(case_dir, 'coverage.dat'),
+                                              with_names=not _names_sent)
+            res.hits.update({(2, pid): c for pid, c in vhits.items()})
+            if names is not None:
+                res.names, _names_sent = names, True
         res.times['coverage'] = time.perf_counter() - t
 
         dut_sig = _read_words(os.path.join(case_dir, 'dut.sig'))

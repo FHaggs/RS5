@@ -1,33 +1,61 @@
 # RS5 fuzzer
 
-Coverage-guided differential fuzzer: each generated program runs on RS5 (Verilator, with
-coverage instrumentation) and on Sail, the signatures are compared and the RS5 coverage is
-fed back to the generator. It reuses the RISCOF pieces (`rs5/env`, `arch_test.h`, `riscof_tb.sv`,
-the Verilator/Sail flags), so any saved case is a regular RISCOF test.
+Differential fuzzer with switchable feedback sources: each generated program runs on RS5
+(Verilator) and on Sail, the signatures are compared, and several *feedback sources* are
+recorded for the case (pipeline edges, trap/CSR transitions, Verilator line coverage, named
+bins, scalars). A chosen subset of the sources guides the generator (corpus + energy); the rest
+is only recorded, so sources can be compared on the same programs. It reuses the RISCOF pieces
+(`rs5/env`, `arch_test.h`, `riscof_tb.sv`, the Verilator/Sail flags), so any saved case is a
+regular RISCOF test.
 
-The current generator is a placeholder (hardcoded bodies with random initial values).
+The feedback sources are documented in **[FONTES.md](FONTES.md)** (Portuguese): what each one
+observes, how a key becomes a map position, file formats, how to switch them on and off.
 
 ## Running
 
 Same prerequisites as RISCOF (toolchain, Sail, Verilator 5.x with a C++20 compiler, `riscv-arch-test`).
+On the GAPH machines `source fuzzer/env.sh` loads the right modules.
 
 ```sh
 make fuzz                                         # baseline ISA, 200 cases, all cores
 make fuzz FUZZ_CONFIG=extensions FUZZ_ARGS="-n 0" # extensions ISA, run until Ctrl-C
 make fuzz-riscof                                  # replay the saved cases with RISCOF
 python3 fuzzer/fuzz.py --help                     # all options
+
+# feedback study: same generator and seed, different guiding source
+python3 fuzzer/fuzz.py --work-dir $PWD/w_none -n 2000 --seed 1 --guide ""     # control, no feedback
+python3 fuzzer/fuzz.py --work-dir $PWD/w_pipe -n 2000 --seed 1 --guide 0      # pipeline edges
+python3 fuzzer/fuzz.py --work-dir $PWD/w_bins -n 2000 --seed 1 --guide 0,6 --weights 6=3
+python3 fuzzer/feedback_report.py $PWD/w_none $PWD/w_pipe $PWD/w_bins -o $PWD/report
 ```
 
-Microarchitecture knobs (`BRANCHPRED`, `DELAY_CYCLES`, ...) are the same Makefile variables used by RISCOF.
+Core knobs (`--delay-cycles`, `--iqueue-size`, `--branchpred`, `--forwarding`) are the same
+variables used by RISCOF; the fuzzer defaults to `DELAY_CYCLES=2` (data memory stalls) because it
+exposes more pipeline paths.
 
-## Outputs (`fuzz_work/`)
+Main options:
+
+| Option | Meaning |
+|---|---|
+| `--record all\|none\|0,1,2,6,7` | sources recorded and logged (RTL probes via `+FUZZ_COV`, Verilator via the build) |
+| `--guide 0,6` | subset of `--record` that decides corpus admission and energy (`""` = no feedback) |
+| `--weights 6=3` | energy weight per source |
+| `--schedule novelty\|rarity` | energy = 1 for novelty, or Σ weight/freq (rare positions pay more) |
+| `--calibrate K` | every K-th case runs twice on RS5; positions that differ are logged |
+| `--no-verilator-cov` | build without `--coverage` (no source 2, faster) |
+| `--generator simple\|placeholder`, `--blocks 3,8`, `--mutate-p 0.8` | generator |
+
+## Outputs (`<work-dir>/`)
 
 | Path | Content |
 |---|---|
-| `obj_dir/Vriscof_tb` | coverage-instrumented model, rebuilt only when RTL or flags change |
-| `suite/rv32i_m/fuzz/src/*.S` | cases that found new coverage or failed (RISCOF suite) |
-| `failures/<case>/` | `test.S`, ELF, `dut.sig`, `ref.sig`, `meta.json`, `coverage.dat`, `result.json` |
-| `uncovered.txt` | RS5 coverage points never hit |
+| `obj_dir/Vriscof_tb` | model (probes always compiled in; coverage-instrumented unless `--no-verilator-cov`) |
+| `cases.jsonl.gz` | one line per case: status, times, spec, novelty and positions per source, scalars, collisions, instability |
+| `feedback_map.json` | final map: positions, buckets, frequency, first case and description per position |
+| `run.json` | arguments, core configuration, feedback configuration |
+| `suite/rv32i_m/fuzz/src/*.S` | cases that found novelty in a guiding source or failed (RISCOF suite) |
+| `failures/<case>/` | `test.S`, ELF, `dut.sig`, `ref.sig`, `meta.json`, `fuzz_cov_*.txt`, `coverage.dat`, `result.json` |
+| `report/` (from `feedback_report.py`) | `report.md` + SVG charts: saturation, bins, collisions, overlap, generator |
 
 Case status: `pass`, `mismatch` (signatures differ), `dut_timeout` (Sail reached `tohost`, RS5 did not),
 `hang` (neither finished: generator problem), `compile_error`, `error`.
@@ -39,33 +67,36 @@ main process                                   pool worker (one case, end to end
 ------------                                   -----------------------------------
 generator.generate() -> Program  ──submit──▶   render .s from cached preprocessed skeleton
                                                gcc → test.elf → nm (symbols) → objcopy → test.bin
-                                               Vriscof_tb +SIG_*/+META_PATH/+MAX_CYCLES → dut.sig, meta.json, coverage.dat
+                                               Vriscof_tb +SIG_* +FUZZ_COV +FUZZ_SRC → dut.sig, meta.json,
+                                                                                      fuzz_cov_<src>.txt, coverage.dat
                                                riscv_sim_rv32d --inst-limit → ref.sig
-CoverageMap.merge(hits)          ◀──Result──   compare signatures, parse coverage.dat (DUT scope only)
-generator.feedback(...)
-save to suite / failures
+FeedbackMap.merge(hits)  -> Novelty ◀──Result──   compare signatures, parse probe files and coverage.dat
+generator.feedback(program, result, novelty)
+log to cases.jsonl.gz, save to suite / failures
 ```
 
 | File | Role |
 |---|---|
-| `fuzz.py` | CLI, process pool, coverage merge, reporting, saving cases |
-| `runner.py` | worker: build, run RS5 and Sail, compare, collect coverage/metadata |
-| `generator.py` | test generation (placeholder) — `generate()` / `feedback()` |
+| `fuzz.py` | CLI, process pool, feedback merge, logging, saving cases |
+| `runner.py` | worker: build, run RS5 and Sail, compare, read the probe files and coverage.dat |
+| `feedback.py` | source models (field tables mirrored from `fuzz_cov.sv`), `FeedbackMap`, `FeedbackConfig`, novelty/energy |
+| `feedback_report.py` | report of how the map and the sources behaved over one or more runs |
+| `generator.py` | `SimpleGenerator` (blocks + corpus + mutation) and the old `PlaceholderGenerator` |
 | `program.py` | `Program` and the RISCOF-compatible `.S` template |
-| `coverage.py` | `coverage.dat` parser and the global `CoverageMap` |
+| `coverage.py` | `coverage.dat` parser (source 2) |
 | `toolchain.py` | tool paths, model build, gcc/Sail flags |
+| `../fuzz_cov.sv` | the probes: `fuzz_pipe_probe` (sources 0, 6, 7), `fuzz_csr_probe` (source 1), bound into RS5 by `riscof_tb.sv` |
 | `../rs5/rs5_verilator.py` | Verilator command shared with the RISCOF plugin |
 
-### Feedback available to the generator
+### Feedback
 
-* **Coverage** (`--coverage-line --coverage-user`, `--toggle` adds toggle coverage): hit count per
-  point, merged into AFL-style buckets. `feedback()` receives the new points and the points that
-  reached a new count bucket.
-* **Metadata** from `riscof_tb` (`+META_PATH`): exit reason, cycles and retired instructions (CPI).
-* **Per-stage times**, to spot where throughput is going.
+Each source is a region of an AFL-style map (8-bit counters, hit-count buckets, virgin bits).
+At the end of a case the main process merges every recorded source; novelty (new position or
+new bucket) in a *guiding* source gives the case a score (it enters the corpus) and an energy
+(rarity of the positions it hit), which the generator uses to pick parents. See FONTES.md.
 
-Functional coverage can be added as SystemVerilog `cover property` statements; they show up as
-`v_user` points without changes to the fuzzer.
+The generator must not expose non-architectural values to the signature: `mstatus`/`mie` reads
+are masked (RS5 and Sail differ in reset/WARL bits), counter reads go to `x0` or are cleared.
 
 ### Parallelism
 

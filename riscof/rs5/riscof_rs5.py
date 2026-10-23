@@ -149,7 +149,8 @@ class rs5(pluginTemplate):
                     +SIG_END={signature_end}\
                     +TOHOST_ADDR={tohost_addr}\
                     +SIG_PATH={sig_file}\
-                    +META_PATH=meta.json'
+                    +META_PATH=meta.json\
+                    +TRACE'
             else:
                 simcmd = 'echo "NO RUN"'
                 objcopycmd = ''

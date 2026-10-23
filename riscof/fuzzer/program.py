@@ -70,6 +70,7 @@ class Program:
     march: str = 'rv32i_zicsr'
     rvtest_isa: str = 'RV32I'
     mem_init: tuple = ()      # initial words of fuzz_mem (rest is 0xdeadbeef)
+    spec: dict = None         # generator description (blocks/seeds), kept for the corpus and logs
 
     def case_checks(self):
         """RVTEST_CASE checks so RISCOF only selects this test for a DUT ISA that supports it."""

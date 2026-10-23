@@ -24,10 +24,18 @@ module RS5Debug
 );
     string file_name;
     int fd;
+    /* The trace is written only with +TRACE on the command line (RISCOF passes it; the fuzzer
+     * does not). Without it there is no file and no per-cycle string formatting. */
+    bit enabled;
 
     initial begin
-        file_name = $sformatf("%m.log");
-        fd = $fopen(file_name, "w");
+        enabled = $test$plusargs("TRACE");
+        if (enabled) begin
+            file_name = $sformatf("%m.log");
+            fd = $fopen(file_name, "w");
+        end
+        else
+            fd = 0;
     end
 
     /* Sail RV32 physical addresses are 34 bits wide, hence printed in binary */
@@ -164,7 +172,7 @@ module RS5Debug
         entry.irq       = RS5.interrupt_ack_o;
         entry.priv      = RS5.privilege;
 
-        if (stepped) begin
+        if (stepped && enabled) begin
             if (RS5.ctrl_execute.compressed) begin
                 entry.log = {entry.log, $sformatf("mem[X,%s] -> %s\n", paddr_str(RS5.pc_execute), hex_str(instruction, 16))};
                 entry.log = {entry.log, $sformatf("[%0d] [%s]: %s (%s)\n", step, priv_str(RS5.privilege), hex_str(RS5.pc_execute, 32), hex_str(instruction, 16))};
@@ -218,7 +226,7 @@ module RS5Debug
     string rd_write, rd_pending;
     always_comb begin
         rd_write = "";
-        if (RS5.ctrl_retire.rd_we && RS5.rd_retire != '0)
+        if (enabled && RS5.ctrl_retire.rd_we && RS5.rd_retire != '0)
             rd_write = $sformatf("x%0d <- %s\n", RS5.rd_retire, hex_str(RS5.regbank_data_writeback, 32));
     end
 
@@ -270,7 +278,8 @@ module RS5Debug
     end
 
     final begin
-        $fclose(fd);
+        if (fd != 0)
+            $fclose(fd);
     end
 
 endmodule

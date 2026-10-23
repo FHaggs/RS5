@@ -53,13 +53,20 @@ def _rtl_sources():
 
 
 def build_model(isa, work_dir, coverage=DEFAULT_COVERAGE):
-    """Verilate riscof_tb with coverage into <work_dir>/obj_dir, skipping it when up to date."""
+    """Verilate riscof_tb into <work_dir>/obj_dir, skipping it when up to date.
+
+    coverage: Verilator coverage kinds to instrument (() = none, fonte 2 unavailable).
+    The feedback probes of riscof/fuzz_cov.sv and the RS5Debug trace are always compiled in;
+    they only run when the simulation gets +FUZZ_COV / +TRACE.
+    """
     obj_dir = os.path.join(work_dir, 'obj_dir')
     binary  = os.path.join(obj_dir, 'Vriscof_tb')
     stamp   = os.path.join(obj_dir, 'fuzz_build_cmd')
 
-    cmd = verilator_cmd(isa, obj_dir, ['--coverage-' + c for c in coverage])
-    cmd_str = ' '.join(cmd)
+    extra = ['--coverage-' + c for c in coverage]
+    cmd = verilator_cmd(isa, obj_dir, extra)
+    # the stamp ignores --Mdir so an obj_dir can be shared (symlinked) between work dirs
+    cmd_str = ' '.join(a for a in cmd if a != obj_dir)
 
     if os.path.exists(binary) and os.path.exists(stamp):
         with open(stamp) as f:

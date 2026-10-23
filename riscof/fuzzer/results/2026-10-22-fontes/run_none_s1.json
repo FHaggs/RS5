@@ -1,0 +1,48 @@
+{
+  "args": {
+    "isa_yaml": "/sim/pedro.fam/RS5/riscof/rs5/baseline.yaml",
+    "work_dir": "/tmp/claude-1695000639/-sim-pedro-fam-RS5/49b5b087-b9ae-4024-9c45-5f3148de84c7/scratchpad/exp/none_s1",
+    "iterations": 8000,
+    "jobs": 12,
+    "seed": 1,
+    "max_cycles": 200000,
+    "keep": false,
+    "show_new": 3,
+    "log_hits": true,
+    "calibrate": 50,
+    "record": "all",
+    "guide": "",
+    "weights": "",
+    "schedule": "rarity",
+    "verilator_cov": true,
+    "trace": false,
+    "generator": "simple",
+    "blocks": "3,8",
+    "mutate_p": 0.8,
+    "branchpred": "1",
+    "forwarding": "1",
+    "dualport_mem": "1",
+    "iqueue_size": "2",
+    "delay_cycles": "2"
+  },
+  "isa": "RV32IMUZicsr_Zihpm",
+  "core": {
+    "BRANCHPRED": "1",
+    "FORWARDING": "1",
+    "DUALPORT_MEM": "1",
+    "IQUEUE_SIZE": "2",
+    "DELAY_CYCLES": "2"
+  },
+  "feedback": {
+    "record": [
+      0,
+      1,
+      2,
+      6,
+      7
+    ],
+    "guide": [],
+    "schedule": "rarity",
+    "weights": {}
+  }
+}
