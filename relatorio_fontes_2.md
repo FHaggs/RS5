@@ -110,8 +110,8 @@ sinal é fino demais e por isso a admissão não filtra" não se sustenta. Com c
 O template ganhou um tratador de trap (registra `mcause`/`mepc` num buffer dentro da assinatura,
 pula a instrução, limpa `MTIE` em interrupções, sempre volta em M) e o gerador ganhou os blocos
 `trap` (ecall, ebreak, instrução ilegal, escrita em CSR só de leitura, load/store/jalr
-desalinhados), `irq` (timer, via `mie.MTIE` e `mstatus.MIE`; `MTIP` está em 1 desde o reset nos
-dois modelos) e `umode` (entra em U por `mret`, roda operações sem CSR, volta por `ecall`). Antes
+desalinhados), `irq` (timer, via `mie.MTIE` e `mstatus.MIE`; `MTIP` está em 1 desde o reset no RS5 e
+desde o primeiro tique do CLINT do Sail, na instrução 100, antes do fim do prólogo) e `umode` (entra em U por `mret`, roda operações sem CSR, volta por `ecall`). Antes
 dos experimentos, 13 trechos escritos à mão passaram com os mesmos traps e o mesmo estado no RS5 e
 no Sail (`probe_check.py --traps`). Duas leituras tiveram de sair por não serem portáveis: `mepc`
 depois de interrupção (depende de onde ela foi aceita) e `mtval` de instrução ilegal (o RS5 grava a
@@ -170,9 +170,8 @@ csrci mstatus, 8` e leitura de `mstatus & 0x88` no fim:
 
 | Entre ligar e desligar `MIE` | Interrupções RS5 / Sail | `mstatus & 0x88` RS5 / Sail |
 |---|---|---|
-| nada | 1 / 0 | 0x00 / 0x00 |
-| 1 `addi` | 1 / 1 | **0x88 / 0x80** |
-| 1 `lw` | 1 / 1 | **0x88 / 0x80** |
+| nada | 1 / 1 | **0x00 / 0x80** (RS5 aceita a interrupção depois do `csrci`, com `MIE` já em 0, e `MPIE` fica 0) |
+| 1 `addi`, `lw`, `sw` ou `csrr` | 1 / 1 | **0x88 / 0x80** (a escrita do `csrci` se perde) |
 | 2 ou 3 `addi` | 1 / 1 | 0x80 / 0x80 |
 | 1 `div` | 1 / 1 | 0x80 / 0x80 |
 
@@ -181,9 +180,41 @@ Interpretação a partir do RTL: `interrupt_pending` sai registrado do `CSRBank`
 `execute.sv` trata a instrução como concluída (`mepc` aponta para a seguinte), mas no `CSRBank.sv`
 a atualização de `mstatus` pelo trap tem prioridade sobre a escrita da instrução no mesmo ciclo
 (`if (raise_exception_i || interrupt_ack_i) ... else if (write_enable_i ...)`), então a escrita do
-`csrci` some. Com `div`, o hold adia a aceitação e o problema não aparece. Com zero instruções, os
-dois modelos divergem de outro jeito (o Sail não aceita a interrupção) e isso merece uma olhada
-separada no Sail. Pela seção 8 do `pesquisa.md`, este é um bug novo, não listado.
+`csrci` some. Com `div`, o hold adia a aceitação e o problema não aparece. Pela seção 8 do
+`pesquisa.md`, este é um bug novo, não listado.
+
+Um cuidado no teste dirigido: no Sail, `mip.MTIP` só sobe no primeiro tique do CLINT, a cada 100
+instruções contando as do vetor de reset. A primeira versão do teste caía nessa fronteira e fazia
+parecer que o Sail não aceitava a interrupção na variante sem instrução; com 128 `nop` de
+preenchimento antes da sequência (como nos programas do fuzzer, cujo prólogo passa de 100
+instruções) os dois modelos aceitam a interrupção em todas as variantes.
+
+O script [riscof/fuzzer/repro_irq_race.py](riscof/fuzzer/repro_irq_race.py) reproduz tudo isso:
+monta as oito variantes como testes RISCOF, roda nos dois modelos, imprime cada palavra da
+assinatura que difere com o nome da região e, com `--trace`, a primeira linha em que os traces de
+instrução divergem. Os arquivos gerados (um `test.S` por variante, assinaturas, traces) estão em
+[riscof/fuzzer/results/2026-10-23-irq-race/](riscof/fuzzer/results/2026-10-23-irq-race/). O
+resultado é o mesmo com `DELAY_CYCLES=0` (`README_delay0.md`), portanto não depende da latência de
+memória. O trecho decisivo dos traces, variante com um `addi` (passo 221 é o `csrsi`):
+
+```
+RS5                                              | Sail
+[222] [M]: 0x80000378 (0x00110113)   addi        | handling int#0x07 at priv M
+[223] [M]: 0x8000037C (0x30047073)   csrci       | CSR mstatus <- 0x1880
+CSR mstatus <- 0x1800                (MIE=0)     | [222] [M]: 0x80000410 (0x34202EF3)  tratador
+Handling interrupt: 0x07                         | ...
+```
+
+O Sail atende a interrupção logo depois do `csrsi`, antes do `addi`. O RS5 executa o `addi` e o
+`csrci`, aceita a interrupção no ciclo em que o `csrci` termina, e o `mstatus` que sobrevive é o do
+trap (MPIE copiado de MIE=1), não o do `csrci`. Depois do `mret`, `MIE` volta a 1 no RS5 e fica 0
+no Sail.
+
+Na variante sem instrução entre `csrsi` e `csrci`, o outro lado da mesma latência: o RS5 executa
+o `csrci` e só então aceita a interrupção, com `MIE` já em 0; `MPIE` recebe esse 0 e o estado
+final é `0x00` contra `0x80` do Sail. Os dois sintomas vêm de `interrupt_pending` chegar ao execute
+um ciclo depois da escrita em `mstatus`, e de o execute não cancelar nem reexecutar a instrução
+que está terminando quando aceita a interrupção.
 
 Uma observação sobre métricas: este bug só é disparado por um padrão de duas instruções, e a rodada
 que mais o disparou foi a guiada por transições de CSR, porque o corpus dela se encheu de blocos
@@ -222,7 +253,8 @@ fontes diferentes, como o Encarsia argumenta.
 ```sh
 source riscof/fuzzer/env.sh && cd riscof
 python3 fuzzer/probe_check.py --work-dir <dir com obj_dir> --traps      # 13 trechos com traps
-python3 fuzzer/probe_check.py --work-dir <dir com obj_dir> --irq-race   # a corrida
+python3 fuzzer/probe_check.py --work-dir <dir com obj_dir> --irq-race   # a corrida (resumo)
+python3 fuzzer/repro_irq_race.py --trace                                 # reprodução completa, com diff e traces
 bash fuzzer/results/2026-10-23-exp2/run_exp2.sh                          # 20 rodadas (ajustar EXP/MODEL)
 python3 fuzzer/feedback_report.py <rodadas...> -o <saída> --baseline none_s1,none_s2,none_s3
 python3 fuzzer/results/2026-10-23-exp2/analyze2.py <exp1> <exp2>

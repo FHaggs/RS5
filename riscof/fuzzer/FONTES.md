@@ -336,7 +336,7 @@ python3 fuzzer/feedback_report.py w_none w_pipe ...                             
 | Bloco | O que gera | O que o tratador faz |
 |---|---|---|
 | `trap` | 1–3 exceções em M: `ecall`, `ebreak`, palavra ilegal, escrita em CSR só de leitura, load/store desalinhado, `jalr` para endereço desalinhado | registra `(mcause, mepc)` no `fuzz_traps` (dentro da assinatura), faz `mepc += 4`, `mret` |
-| `irq` | liga `mie.MTIE` e `mstatus.MIE` (MTIP=1 desde o reset), 1–3 instruções, desliga `MIE`; em 20% liga só um dos bits | registra `(mcause, 0)`, limpa `MTIE`, `mret`. `mepc` não é registrado porque RS5 e Sail aceitam a interrupção em instruções diferentes |
+| `irq` | liga `mie.MTIE` e `mstatus.MIE` (MTIP=1 desde o reset no RS5 e desde o primeiro tique do CLINT, instrução 100, no Sail: o prólogo já passou disso), 1–3 instruções, desliga `MIE`; em 20% liga só um dos bits | registra `(mcause, 0)`, limpa `MTIE`, `mret`. `mepc` não é registrado porque RS5 e Sail aceitam a interrupção em instruções diferentes |
 | `umode` | desliga MIE/MPIE/MTIE, `mret` para U, 2–6 operações sem CSR (30%: uma leitura de CSR, que é ilegal em U), `ecall` | sempre volta em M (`MPP=M`), então o `ecall` encerra o trecho em U |
 
 Leituras que não são portáveis entre RS5 e Sail e ficam fora do gerador com traps: `mepc` (depende de

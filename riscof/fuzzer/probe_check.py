@@ -173,15 +173,17 @@ def irq_race(cfg):
     """Corrida entre a aceitação da interrupção de timer e o `csrci mstatus, 8` que desliga MIE.
     Com 1 instrução entre ligar e desligar MIE, o RS5 aceita a interrupção no mesmo ciclo em que o
     csrci termina e perde a escrita do CSR (fica com MIE=1); o Sail fica com MIE=0. Com 0
-    instruções, o RS5 aceita a interrupção e o Sail não. Com 2 ou mais, os dois concordam."""
+    instruções, o RS5 aceita a interrupção depois do csrci, com MIE já em 0. Com 2 ou mais, os dois
+    concordam. Ver repro_irq_race.py para a versão completa."""
     print('==== irq-race: csrs mie,MTIE; csrsi mstatus,8; <n instruções>; csrci mstatus,8')
     variants = []
+    pad = '    .rept 128\n    nop\n    .endr\n'      # MTIP no Sail só sobe no tique do CLINT (instrução 100)
     for n in range(0, 4):
-        body = ('    li x1, 0x80\n    csrs mie, x1\n    csrsi mstatus, 8\n' + '    addi x2, x2, 1\n' * n +
+        body = (pad + '    li x1, 0x80\n    csrs mie, x1\n    csrsi mstatus, 8\n' + '    addi x2, x2, 1\n' * n +
                 '    csrci mstatus, 8\n    csrr x3, mstatus\n    andi x3, x3, 0x88\n    nop')
         variants.append(('addi x%d' % n, body))
-    variants.append(('lw x1', '    li x1, 0x80\n    csrs mie, x1\n    csrsi mstatus, 8\n    lw x6, 0(x31)\n    csrci mstatus, 8\n    csrr x3, mstatus\n    andi x3, x3, 0x88\n    nop'))
-    variants.append(('div x1', '    li x1, 0x80\n    csrs mie, x1\n    csrsi mstatus, 8\n    li x6, 1000\n    li x7, 7\n    div x8, x6, x7\n    csrci mstatus, 8\n    csrr x3, mstatus\n    andi x3, x3, 0x88\n    nop'))
+    variants.append(('lw x1', pad + '    li x1, 0x80\n    csrs mie, x1\n    csrsi mstatus, 8\n    lw x6, 0(x31)\n    csrci mstatus, 8\n    csrr x3, mstatus\n    andi x3, x3, 0x88\n    nop'))
+    variants.append(('div x1', pad + '    li x1, 0x80\n    csrs mie, x1\n    csrsi mstatus, 8\n    li x6, 1000\n    li x7, 7\n    div x8, x6, x7\n    csrci mstatus, 8\n    csrr x3, mstatus\n    andi x3, x3, 0x88\n    nop'))
     for i, (name, body) in enumerate(variants):
         prog = Program(name='race-' + name.replace(' ', '_'), body=body, march='rv32im_zicsr', rvtest_isa='RV32IM', spec={}, traps=True)
         res = run_case(100 + i, prog)

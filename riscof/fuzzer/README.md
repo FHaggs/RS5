@@ -86,6 +86,8 @@ log to cases.jsonl.gz, save to suite / failures
 | `feedback.py` | source models (field tables mirrored from `fuzz_cov.sv`), `FeedbackMap`, `FeedbackConfig`, novelty/energy |
 | `feedback_report.py` | report of how the map and the sources behaved over one or more runs |
 | `generator.py` | `SimpleGenerator` (blocks + corpus + mutation) and the old `PlaceholderGenerator` |
+| `probe_check.py` | hand-written programs that check what the probes report (`--traps`, `--irq-race`) |
+| `repro_irq_race.py` | standalone reproduction of the RS5 interrupt/CSR-write race, with signature and trace diffs |
 | `program.py` | `Program` and the RISCOF-compatible `.S` template |
 | `coverage.py` | `coverage.dat` parser (source 2) |
 | `toolchain.py` | tool paths, model build, gcc/Sail flags |
