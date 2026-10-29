@@ -1,0 +1,171 @@
+%----------------------------------------------------------------------------------
+% Exemplo do uso da classe tcc.cls. Veja o arquivo .cls
+% para mais detalhes e instruções.
+%----------------------------------------------------------------------------------
+\chapter{\label{chap:intro}Introdução}
+% Comando para inserir siglas. Tanto as siglas quanto as
+% abreviaturas devem aparecer em ordem ALFABÉTICA nas listas
+% correspondentes. Como a classe no momento não é capaz de ordenar
+% as entradas automaticamente, existem duas alternativas:
+%
+%    a- Insira todas as siglas e abreviaturas no começo do texto,
+%    manualmente e em ordem alfabética.
+%
+%    b- Caso esteja em um ambiente UNIX (Linux, Mac ou Cygwin/similares),
+%    utilize o script sort.sh e o makefile que acompanham a
+%    classe. O makefile automaticamente compila a monografia para
+%    PDF (mas assume que o latex está acessível pela linha de
+%    comando). Neste caso a ordenação é feita de forma automática.
+%
+% \sigla{abc}{Associação Brasileira de Computadores}
+% \sigla{xyz}{lorem ipsum dolor sit}
+% \sigla{ijk}{lorem ipsum dolor sit}
+% %
+% % Comando para inserir abreviaturas.
+% %
+% \abrev{Abrev}{Abreviatura}
+% \abrev{Inform}{Informática}
+% %
+% % Comando para inserir símbolos. Estes irão aparecer em ordem
+% % de ocorrência, já que o número da página está presente na lista
+% % de símbolos.
+% \simbolo{Hz}{Hertz}
+% \simbolo{$\pi$}{Constante com valor aproximado de $3.1415926$}%
+%
+
+% Na proposta é feita a identificação e
+% análise inicial de um problema a ser solucionado, uma revisão bibliográfica inicial, e
+% o planejamento de atividades envolvidas no desenvolvimento do Trabalho de
+% Conclusão I e II para a solução do problema, que apresentará uma visão global do
+% trabalho proposto.
+
+% Desta forma a proposta deve apresentar de forma clara
+% os objetivos do trabalho salientando o problema a ser resolvido. Deve
+% ficar claro o conhecimento do estado-da-arte na área, bem como
+% destacar a contribuição do trabalho em relação ao problema. O tema
+% escolhido não necessita ser necessariamente original, porém deve
+% constituir um trabalho de conclusão em termos de complexidade e
+% relevância.
+
+% Começar com um contexto + problema: implementação e verificação de processadores. Validação da corretude da implementação de um conjunto de instruções em uma microarquitetura.
+
+O desenvolvimento de processadores envolve a implementação de microarquiteturas capazes de executar a especificação definida por uma arquitetura de conjunto de instruções (ISA). 
+Nessas implementações, diferentes componentes, como unidades funcionais, bancos de registradores, mecanismos de controle, interfaces de memória e estágios do pipeline, devem cooperar para preservar a semântica definida pela ISA. 
+Essa correção deve ser mantida mesmo diante de dependências de dados, desvios, exceções, interrupções e operações com múltiplos ciclos \citep{hennessy2025computer}.
+
+Nesse contexto, a verificação constitui uma etapa fundamental do projeto, pois uma instrução corretamente implementada em um cenário isolado pode apresentar comportamento incorreto quando combinada com outras instruções ou executada sob diferentes condições da microarquitetura.
+A validação funcional de um processador busca determinar se sua implementação produz os resultados arquiteturais esperados para todos os programas aceitos pela arquitetura \citep{tain2025survey}. 
+Esse processo deve verificar não apenas o resultado individual de cada instrução, mas também as interações entre instruções, o estado dos registradores, os acessos à memória, as mudanças no fluxo de controle e o tratamento de exceções. 
+
+O espaço de programas possíveis, entretanto, cresce rapidamente com o tamanho das sequências, a quantidade de registradores e de operandos disponíveis e as diferentes configurações da microarquitetura. 
+Consequentemente, a execução de um conjunto finito de testes escritos manualmente não permite explorar de forma abrangente todos os comportamentos relevantes de uma implementação \citep{difuzzrtl}.
+
+% Continua - RISC-V: brevemente o que é; extensões; conexão com o parágrafo anterior: validar instruções implementadas.
+
+RISC-V \citep{riscvIsa} é uma arquitetura de conjunto de instruções aberta, baseada nos princípios de arquiteturas de conjunto reduzido de instruções. Sua especificação é organizada de forma modular, composta por uma arquitetura base e por extensões que adicionam funcionalidades específicas, como multiplicação e divisão, operações atômicas, instruções comprimidas, processamento vetorial e operações criptográficas. Essa organização permite que diferentes processadores implementem subconjuntos distintos da arquitetura de acordo com seus objetivos de desempenho, área e consumo de energia. Ao mesmo tempo, essa flexibilidade amplia o desafio de verificação, pois cada combinação de extensões representa uma configuração arquitetural que deve manter conformidade com a especificação correspondente.
+
+Além das variações da arquitetura de conjunto de instruções, uma mesma implementação pode oferecer diferentes configurações microarquiteturais sem alterar o comportamento observável pelo programa. 
+Recursos como o encaminhamento de operandos, a predição de desvios, as filas de instruções e diferentes organizações da memória modificam a forma como as instruções são executadas no processador. 
+Embora essas configurações devam ser arquiteturalmente equivalentes, elas exercitam caminhos de controle, situações de dependência e padrões de temporização distintos. 
+Dessa forma, a validação deve considerar tanto as instruções implementadas quanto as possíveis combinações entre os parâmetros internos do processador.
+
+% O processador RS5  constitui um ambiente adequado para o estudo desse problema. 
+O RS5 \citep{RS5} é um processador RISC-V de 32 bits desenvolvido em SystemVerilog para sistemas embarcados. 
+Sua microarquitetura possui um pipeline de quatro estágios e inclui módulos responsáveis pela busca, decodificação, execução, acesso à memória e escrita dos resultados no banco de registradores. 
+O projeto também oferece suporte aos modos de privilégio de máquina e de usuário, além de mecanismos para exceções, interrupções e acesso aos registradores de controle e de estado.
+
+Uma característica relevante do RS5 é sua capacidade de parametrização. 
+A arquitetura base RV32I pode ser combinada com extensões como M, A, C, Zicond, Zihpm, Zbkb, Zkne, Zknh, Zve32x, bem como com extensões não padronizadas desenvolvidas para aplicações específicas. 
+A implementação também permite configurar características da microarquitetura, incluindo o encaminhamento de operandos, a predição estática de desvios, o tamanho da fila de instruções e parâmetros relacionados à unidade vetorial. 
+Essa flexibilidade permite empregar o mesmo código RTL na avaliação de diferentes organizações do processador, mas também aumenta o número de configurações a serem verificadas.
+
+% O repositório do RS5 disponibiliza aplicações, programas de teste, infraestrutura de simulação e suporte à prototipação. 
+Entre os mecanismos empregados para validação do RS5 estão a suíte \textit{riscv-tests} \citep{riscv2026tests} e uma integração com o RISC-V Compatibility Framework, denominado RISCOF \citep{incore2026riscof}.
+
+A suíte \textit{riscv-tests} reúne testes unitários escritos em Assembly para instruções e funcionalidades específicas da arquitetura RISC-V. 
+No RS5, esses testes são compilados e ligados em um único programa, que executa, sequencialmente, casos para instruções inteiras, operações de multiplicação e divisão, instruções atômicas, instruções comprimidas, operações sobre bits e funcionalidades da arquitetura privilegiada.
+Esses testes são úteis para identificar erros básicos na implementação de instruções e verificar casos previamente conhecidos. 
+Entretanto, sua capacidade de exploração é limitada pelas sequências definidas por seus autores. 
+As combinações entre instruções, registradores, dependências, acessos à memória e eventos de controle permanecem restritas aos cenários explicitamente codificados. 
+Como consequência, comportamentos que dependem de interações pouco usuais entre instruções ou de estados específicos do pipeline podem não ser exercitados.
+
+O RISCOF oferece uma validação arquitetural sistemática. 
+O framework seleciona testes compatíveis com a configuração da arquitetura, executa esses testes no dispositivo sob teste e em um modelo de referência, e compara os resultados produzidos pelas execuções por meio da região de memória onde são escritos, chamada de assinatura. 
+Na infraestrutura do RS5, o dispositivo sob teste é compilado e simulado com o Verilator \citep{snyder2026verilator}, enquanto o modelo formal Sail \citep{armstrong2019isa} da arquitetura RISC-V é utilizado como referência. 
+Cada teste é compilado separadamente e executado em ambos os modelos. 
+Uma divergência nas assinaturas indica uma possível diferença entre o comportamento do processador e a semântica definida pela arquitetura.
+
+O RS5 também permite variar os parâmetros da implementação. 
+Entre os parâmetros disponíveis estão a habilitação do encaminhamento de operandos, a predição de desvios, o tamanho da fila de instruções, o uso de memória com uma ou duas portas e o número de ciclos de atraso nas respostas da memória. 
+% As extensões habilitadas são definidas pela descrição da arquitetura utilizada pelo RISCOF e convertidas em parâmetros para a compilação do modelo no Verilator. 
+% Essa estrutura fornece os componentes necessários para executar automaticamente um programa tanto no RS5 quanto no modelo Sail, em diferentes configurações.
+% TODO: Referencias do riscof e riscvTests
+Apesar de sua maior abrangência, a validação realizada pelo RISCOF continua dependente de testes arquiteturais previamente escritos. 
+Esses testes são projetados principalmente para demonstrar que determinadas funcionalidades estão presentes e que produzem resultados compatíveis com a especificação. 
+Eles não exploram necessariamente todas as interações entre instruções nem todas as condições internas geradas por diferentes configurações do pipeline. 
+A própria especificação do formato de testes arquiteturais ressalta que os testes de compatibilidade não substituem um processo completo de verificação.
+
+Uma alternativa para ampliar essa exploração é o uso de \textit{fuzzing} \citep{zeller2024fuzzing}. 
+Essa técnica gera e modifica entradas automaticamente, utilizando informações obtidas durante a execução para selecionar entradas capazes de alcançar novos comportamentos. 
+No contexto de processadores, as entradas podem ser programas em Assembly e o comportamento de interesse pode ser representado pela cobertura do código RTL, por mudanças no estado arquitetural ou por transições em estruturas internas. 
+Trabalhos anteriores demonstraram que a geração de instruções orientada por cobertura e a comparação com modelos de referência podem revelar erros que não são detectados por suítes convencionais \citep{difuzzrtl,cascade,divefuzz,SIMFUZZ}. 
+% TODO: Perguntar angelo: Posso citar isso aqui? Deixar so fuzzers de diferentes estrategias
+% Nao tenho certeza como eu vou fazer a mutacao, nao queria me comprometer aqui.
+
+ % Essa parte tenho certeza que vou fazer, nao entra em detalhes tao pequenos
+Entretanto, sequências completamente aleatórias têm baixa probabilidade de representar fluxos de execução relevantes. 
+Operações encontradas em programas reais possuem padrões de dependência e de acesso à memória que refletem tarefas computacionais concretas. 
+Reduções, transformações de elementos, produtos escalares, multiplicações de matrizes, convoluções e percursos sobre estruturas de dados combinam instruções de maneiras que exercitam simultaneamente unidades funcionais, mecanismos de encaminhamento, controle de desvios e interfaces de memória. 
+O uso de blocos extraídos desses programas como corpus inicial permite preservar características de código real enquanto mutações sistemáticas exploram novas combinações. 
+Para que essas características sejam preservadas ao longo do processo de geração, a mutação deve atuar sobre a estrutura desses blocos, e não sobre instruções isoladas, evitando que sequências computacionalmente coerentes sejam fragmentadas em programas sem relação com os padrões de execução que motivaram sua escolha.
+ 
+\textbf{O objetivo geral deste trabalho é a construção de um \textit{fuzzer} para o RS5 baseado no RISCOF, capaz de gerar programas de teste a partir da combinação e modificação de blocos semânticos em Assembly extraídos de aplicações reais e executá-los em diferentes configurações do processador}. Os programas gerados serão avaliados por meio da comparação entre o comportamento do RS5, simulado com o Verilator, e o modelo de referência Sail, utilizando métricas de cobertura e de diversidade estrutural para orientar a exploração do espaço de testes. 
+ 
+Para atingir o objetivo geral, são definidos os seguintes objetivos específicos:
+ 
+\begin{enumerate}
+    \item Utilizar o RISCOF como base para a compilação, execução e comparação dos programas de teste no RS5 e no modelo de referência Sail;
+ 
+    \item Construir um corpus inicial composto por blocos de Assembly extraídos de aplicações reais, incluindo padrões computacionais como reduções, transformações de elementos, produtos escalares e operações matriciais;
+ 
+    \item Desenvolver mecanismos para combinar e modificar os blocos do corpus, incluindo substituição de registradores, alteração de operandos, reorganização de instruções e modificação das dependências entre operações, preservando a estrutura de controle de cada bloco durante a mutação;
+ 
+    \item Definir um critério de mutação para gerar os programas e utilizá-lo para orientar a seleção de quais combinações de blocos e mutações priorizar para simulação;
+ 
+    \item Integrar a coleta de cobertura do Verilator ao processo de geração, utilizando a cobertura obtida como critério complementar de avaliação e de seleção de entradas para o corpus;
+ 
+    \item Automatizar a execução dos testes em diferentes configurações da arquitetura de conjunto de instruções e da microarquitetura do RS5;
+ 
+    \item Avaliar configurações com diferentes extensões, políticas de encaminhamento, tamanhos da fila de instruções, organizações de memória e ciclos de resposta da memória;
+ 
+    \item Detectar e registrar divergências entre o comportamento observado no RS5 e os resultados produzidos pelo modelo Sail;
+ 
+    \item Avaliar a abordagem proposta com base na cobertura alcançada, na diversidade dos estados testados e na capacidade de revelar comportamentos não contemplados pelas suítes de teste existentes.
+\end{enumerate}
+ 
+Com essa abordagem, espera-se complementar os mecanismos de validação presentes no RS5 com um processo capaz de gerar automaticamente diversos programas voltados à exploração da implementação. 
+A combinação de blocos provenientes de código real, mutações estruturadas, cobertura do RTL como critério complementar de avaliação, execução diferencial e variação automática de parâmetros busca reduzir a dependência de testes manuais e aumentar a probabilidade de exercitar interações complexas entre a arquitetura de conjunto de instruções e a microarquitetura do processador.
+
+A organização do restante do documento é feita da seguinte forma:
+o \cref{chap:related} apresenta os trabalhos relacionados.
+
+
+% Processador alvo: RS5. 
+%     - Artigo (LASCAS)
+%     - Readme do repositório
+%     - Outro MD da documentação no repositório
+%     - Extensível (ISA) e modular (microarquitetura)
+
+% Motivação. RS5 possui validação somente através de suite de programas de teste (https://github.com/gaph-pucrs/RS5/tree/master/app/riscv-tests) e do RISCOF.
+% O que faz cada um (RISCV-tests e o RISCOF).
+% Limitações: RISC-V TESTS não tem cobertura suficiente; RISCOF é uma suite mais completa, que roda testes individuais -> ainda depende de testes manualmente escritos.
+
+% Objetivo geral. - em uma frase o que quer fazer.
+% Objetivos específicos. - objetivos menores para atingir o geral
+%     > Usar o RISCOF como base
+%     > Adicionar testes gerados automaticamente através de fuzzying tendo como objetivo maior cobertura de código do processador.
+%     > Variar configurações de ISA e microarquitetura (parâmetros do top-level e do testbench), como por exemplo, forwarding, tamanho da fila de instruções, ciclos de resposta da memória, extensões presentes.
+%         > De forma automática.
+
+% Organização do documento.
+%     > O capítulo 2 apresenta os trabalhos relacionados

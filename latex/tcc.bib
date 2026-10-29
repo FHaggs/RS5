@@ -1,0 +1,259 @@
+%----------------------------------------------------------------------------------
+% Exemplo do uso dos estilos bibliográficos tcc-{alpha,num}.bst.
+% Veja o arquivo tcc.cls para mais detalhes e instruções.
+%----------------------------------------------------------------------------------
+
+-- Atenção! Sempre confira as entradas BibTeX copiadas de
+bibliotecas digitais, pois muitas vezes as mesmas possuem o
+formato incorreto, ou falta alguma informação necessária para
+a referência.
+
+Cascade
+
+% 
+@inproceedings {cascade,
+author = {Flavien Solt and Katharina Ceesay-Seitz and Kaveh Razavi},
+title = {Cascade: {CPU} Fuzzing via Intricate Program Generation},
+booktitle = {33rd USENIX Security Symposium (USENIX Security 24)},
+year = {2024},
+isbn = {978-1-939133-44-1},
+address = {Philadelphia, PA},
+pages = {5341--5358},
+url = {https://www.usenix.org/conference/usenixsecurity24/presentation/solt},
+publisher = {USENIX Association},
+month = aug,
+note={\url{https://www.usenix.org/conference/usenixsecurity24/presentation/solt}}
+}
+
+@misc{difuzzrtl,
+  author={Hur, Jaewon and Song, Suhwan and Kwon, Dongup and Baek, Eunjin and Kim, Jangwoo and Lee, Byoungyoung},
+  booktitle={2021 IEEE Symposium on Security and Privacy (SP)}, 
+  title={DifuzzRTL: Differential Fuzz Testing to Find CPU Bugs}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={1286-1303},
+  keywords={Rockets;Privacy;Protocols;Computer bugs;Computer architecture;Fuzzing;Hardware;CPU-bugs;Differential-Fuzzing;Register-coverage},
+  doi={10.1109/SP40001.2021.00103}},
+  note={\url{https://doi.org/10.1109/SP40001.2021.00103}}
+
+
+@misc{divefuzz,
+author = {Guo, Zihui and Yuan, Miaomiao and Yang, Yanqi and Chen, Liwei and Shi, Gang and Meng, Dan},
+title = {DiveFuzz: Enhancing CPU Fuzzing via Diverse Instruction Construction},
+year = {2025},
+isbn = {9798400715259},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3719027.3765167},
+doi = {10.1145/3719027.3765167},
+booktitle = {Proceedings of the 2025 ACM SIGSAC Conference on Computer and Communications Security},
+pages = {1964–1978},
+numpages = {15},
+keywords = {fuzzing, hardware verification, test generation},
+location = {Taipei, Taiwan},
+series = {CCS '25},
+note={\url{https://doi.org/10.1145/3719027.3765167}}
+}
+
+%%%%%%%% Relacionados
+@misc{SIMFUZZ,
+      title={SimFuzz: Similarity-guided Block-level Mutation for RISC-V Processor Fuzzing}, 
+      author={Hao Lyu and Jingzheng Wu and Xiang Ling and Yicheng Zhong and Zhiyuan Li and Tianyue Luo},
+      year={2026},
+      eprint={2601.11838},
+      archivePrefix={arXiv},
+      primaryClass={cs.CR},
+      url={https://arxiv.org/abs/2601.11838}, 
+      note={\url{https://arxiv.org/abs/2601.11838}},
+}
+
+%%%%%%%%%%%%%%%%%%%% Misc
+@book{zeller2024fuzzing,
+  author    = {Andreas Zeller and Rahul Gopinath and Marcel B{\"o}hme and Gordon Fraser and Christian Holler},
+  title     = {The Fuzzing Book: Tools and Techniques for Generating Software Tests},
+  year      = {2024},
+  publisher = {CISPA Helmholtz Center for Information Security},
+  url       = {https://www.fuzzingbook.org/},
+  note       = {\url{https://www.fuzzingbook.org/}},
+}
+
+@misc{riscvIsa,
+  author       = {{RISC-V International}},
+  title        = {{The RISC-V Instruction Set Manual, Volume I:
+                  Unprivileged Architecture}},
+  year         = {2026},
+  note         = {\url{https://docs.riscv.org/reference/isa/v20260120/unpriv/unpriv-index.html}},
+}
+
+@misc{snyder2026verilator,
+  author       = {Snyder, Wilson and Wasson, Paul and Galbi, Duane and Lore, Geza and others},
+  title        = {Verilator},
+  year         = {2026},
+  note         = {\url{https://verilator.org}},
+}
+
+@misc{incore2026riscof,
+  author       = {{InCore Semiconductors}},
+  title        = {{RISCOF}: The {RISC-V} Compatibility Framework},
+  year         = {2026},
+  note         = {\url{https://github.com/riscv-software-src/riscof}},
+}
+
+@misc{riscv2026tests,
+  author       = {{RISC-V International}},
+  title        = {{riscv-tests: Unit Tests for RISC-V Processors}},
+  year         = {2026},
+  note         = {\url{https://github.com/riscv-software-src/riscv-tests}},
+}
+
+
+%%%%%%%%%%%%%%%%%%%% Conference
+@inproceedings{RS5,
+  author={Nunes, Willian Analdo and Dal Zotto, Angelo Elias and Borges, Caroline da Silva and Moraes, Fernando Gehm},
+  booktitle={{IEEE} Latin America Symposium on Circuits and Systems (LASCAS)}, 
+  title={{RS5: An Integrated Hardware and Software Ecosystem for RISC-V Embedded Systems}}, 
+  year={2024},
+  pages={1--5},
+  note={\url{https://doi.org/10.1109/LASCAS60203.2024.10506171}}
+}
+
+%%%%%%%%%%%%%%%%%%% Article
+@article{armstrong2019isa,
+  author  = {Armstrong, Alasdair and Bauereiss, Thomas and Campbell, Brian and Reid, Alastair and Gray, Kathryn E. and Norton, Robert M. and Mundkur, Prashanth and Wassell, Mark and French, Jon and Pulte, Christopher and Flur, Shaked and Stark, Ian and Krishnaswami, Neel and Sewell, Peter},
+  title   = {{ISA Semantics for ARMv8-A, RISC-V, and CHERI-MIPS}},
+  journal = {Proceedings of the ACM on Programming Languages},
+  volume  = {3},
+  number  = {POPL},
+  pages   = {71:1--71:31},
+  year    = {2019},
+  note    = {\url{https://doi.org/10.1145/3290384}}
+}
+
+@article{tain2025survey,
+  author  = {Tain, Chloe and Patil, Savita and Al-Asaad, Hussain},
+  title   = {{Survey of Verification of RISC-V Processors}},
+  journal = {Springer Journal of Electronic Testing},
+  volume  = {41},
+  number  = {2},
+  pages   = {111--138},
+  year    = {2025},
+  note    = {\url{https://doi.org/10.1007/s10836-025-06169-3}}
+}
+
+%%%%%%%%%%%%%%%%%%%% Book
+@book{hennessy2025computer,
+  author    = {Hennessy, John L. and Patterson, David A. and Kozyrakis, Christos},
+  title     = {Computer Architecture: A Quantitative Approach},
+  edition   = {7th},
+  publisher = {Morgan Kaufmann},
+  address   = {Cambridge, MA},
+  year      = {2025}
+}
+
+-- Exemplo de referência a artigos de revistas e periódicos
+@article{NAGAPACKING07,
+   address={Amsterdam, The Netherlands, The Netherlands},
+   author={Hiroshi Nagamochi and Yuusuke Abe},
+   journal={Discrete Appl. Math.},
+   number={4},
+   pages={523--537},
+   publisher={Elsevier Science Publishers B. V.},
+   title={An approximation algorithm for dissecting a rectangle into rectangles with specified areas},
+   volume={155},
+   year={2007},
+}
+
+-- Exemplo de referência a livros
+@book{CORMEMALGORITHMS01,
+   address={Cambridge, MA},
+   author={Cormen, Thomas  H. and Leiserson, Charles E. and Rivest, Ronald L. and Stein, Clifford},
+   howpublished={Paperback},
+   month={September},
+   numpages={1184},
+   publisher={{The MIT Press}},
+   title={Introduction to Algorithms, Second Edition},
+   year={2001},
+}
+
+-- Exemplo de referência a um capítulo de livro
+@inbook{SKIENAC698,
+   address={New York, NY, USA},
+   author={Steven S. Skiena},
+   publisher={Springer-Verlag New York, Inc.},
+   title={The algorithm design manual},
+   year={1998},
+   chapter={6},
+   pages={139--161}
+}
+
+-- Exemplo de referência a uma parte de livro com título e autores próprios
+@incollection{BENTLEYBC07,
+   author={Jon Bentley},
+   title={The Most Beautiful Code {I} Never Wrote},
+   booktitle={Beautiful Code: Leading Programmers Explain How They Think},
+   editor={Andy Oram and Greg Wilson},
+   chapter={3},
+   publisher={O'Reilly \& Associates, Inc.},
+   address={Sebastopol, CA},
+   year={2007},
+   pages={29--40},
+   numpages={618}
+}
+-- Exemplo de referência para dissertações de mestrado
+@mastersthesis{PICCOLIDM08,
+   address={Porto Alegre, RS, Brasil},
+   author={Ricardo Farias Bidart Piccoli},
+   numpages={104},
+   school={Faculdade de Inform\'{a}tica -- PUCRS},
+   title={Um algoritmo determin\'{i}stico para adapta\c{c}\~{a}o autom\'{a}tica de documentos de conte\'{u}do vari\'{a}vel},
+   year={2008},
+   url={http://tede.pucrs.br/tde_busca/arquivo.php?codArquivo=2593}
+}
+@mastersthesis{GOLDENBERGAPL02,
+   address={Brighton, UK},
+   author={Eldan Goldenberg},
+   month={Nov},
+   numpages={41},
+   school={School of Cognitive \& Computing Sciences, University of Sussex},
+   title={Automatic layout of variable-content print data},
+   url={http://www.hpl.hp.com/techreports/2002/HPL-2002-286.html},
+   year={2009},
+}
+
+-- Exemplo de referência para teses de doutorado
+@phdthesis{PLASSPAG81,
+   address={Stanford, CA, USA},
+   author={Michael Frederick Plass},
+   numpages={80},
+   school={Stanford University},
+   title={Optimal pagination techniques for automatic typesetting systems},
+   year={1981},
+}
+
+-- Exemplo de technical report
+@techreport{XIAOAPL05,
+   address={Palo Alto, CA, USA},
+   author={Xiaofan Lin},
+   institution={Hewlett \& Packard Laboratories},
+   numpages={33},
+   title={Active Layout Engine: Algorithms and Applications in Variable Data Printing},
+   url={http://www.hpl.hp.com/techreports/2005/HPL-2005-6R1.html},
+   year={2005},
+}
+
+-- Exemplos de referências a sites da Internet
+@misc{COFFMANPACKING98,
+   author={E. Coffman and J. Galambos and S. Martello and D. Vigo},
+   title={Bin packing approximation algorithms: Combinatorial Analysis},
+   url={http://citeseer.ist.psu.edu/coffman98bin.html},
+   urlaccessdate={Dez. 2007},
+   year={1998}
+}
+@misc{WIKIPIC09,
+   author={Wikipedia},
+   title={Wikipedia:Featured pictures --- {W}ikipedia{,} The Free Encyclopedia},
+   month={Nov},
+   url={http://en.wikipedia.org/wiki/Featured_pictures},
+   year={2009},
+}
