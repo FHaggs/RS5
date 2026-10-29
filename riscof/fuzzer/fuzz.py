@@ -53,6 +53,8 @@ def parse_args():
     p.add_argument('--log-hits', action='store_true', default=True,
                    help='store the per-case hits in cases.jsonl.gz (default on; needed by feedback_report.py)')
     p.add_argument('--no-log-hits', dest='log_hits', action='store_false')
+    p.add_argument('--no-suite', dest='suite', action='store_false',
+                   help='do not save novel cases as a RISCOF suite (failures are still saved)')
     p.add_argument('--calibrate', type=int, default=0, metavar='K',
                    help='run every K-th case twice on RS5 and log the positions that differ (stability)')
     # feedback
@@ -149,7 +151,7 @@ class Fuzzer:
                 with open(os.path.join(dest, 'result.json'), 'w') as f:
                     json.dump({'status': res.status, 'detail': res.detail, 'meta': meta, 'spec': program.spec}, f, indent=2)
 
-        if nov.score > 0 or res.status in ('mismatch', 'dut_timeout'):
+        if (nov.score > 0 and self.args.suite) or res.status in ('mismatch', 'dut_timeout'):
             self.save_to_suite(program)
 
         entry = {

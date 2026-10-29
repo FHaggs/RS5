@@ -372,6 +372,7 @@ class SimpleGenerator:
         self.kinds = tuple(kinds) if kinds else (BLOCK_KINDS_TRAPS if traps else BLOCK_KINDS)
         self.corpus_policy = corpus         # 'novelty': só casos com score > 0; 'all': todo caso que passa
         self.corpus = []            # [(spec, energy)]
+        self._cum = []              # pesos acumulados do corpus (sorteio de pai em O(log n))
         self.stats = {'random': 0, 'mutated': 0, 'kept': 0}
 
     # ---- specs -----------------------------------------------------------------
@@ -411,8 +412,7 @@ class SimpleGenerator:
         return new
 
     def _pick_parent(self):
-        weights = [max(e, 1e-6) for _, e in self.corpus]
-        return self.rng.choices(self.corpus, weights=weights)[0][0]
+        return self.rng.choices(self.corpus, cum_weights=self._cum)[0][0]
 
     # ---- render ----------------------------------------------------------------
 
@@ -452,6 +452,7 @@ class SimpleGenerator:
         (ou todos os que passaram, com corpus='all')."""
         if result.status == 'pass' and (novelty.score > 0 or self.corpus_policy == 'all'):
             self.corpus.append((program.spec, novelty.energy))
+            self._cum.append((self._cum[-1] if self._cum else 0.0) + max(novelty.energy, 1e-6))
             self.stats['kept'] += 1
 
 

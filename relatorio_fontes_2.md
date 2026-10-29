@@ -1,6 +1,7 @@
 # Relatório 2: mutador × sinal, e o gerador com traps
 
-Data: 2026-10-23. Branch `cov-tests`. Continua o [relatorio_fontes.md](relatorio_fontes.md), que
+Data: 2026-10-23. Branch `cov-tests`. Continua o [relatorio_fontes.md](relatorio_fontes.md)
+e continua em [relatorio_fontes_3.md](relatorio_fontes_3.md) (saturação em 200 000 casos), que
 terminou com a pergunta: "guiar pela fonte 0 rendeu menos arestas que o aleatório; é o mutador que
 é ruim, o sinal que é ruim, ou o sinal que está sendo usado errado?". Dados brutos, tabelas
 completas e todos os gráficos em

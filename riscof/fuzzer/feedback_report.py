@@ -78,7 +78,7 @@ class Run:
 # svg
 # ---------------------------------------------------------------------------
 
-def svg_lines(series, title, xlabel, ylabel, width=720, height=360, logx=False):
+def svg_lines(series, title, xlabel, ylabel, width=720, height=360, logx=False, logy=False):
     """series: [(label, [y...])] com x = 1..len. Devolve o texto SVG."""
     import math
     L, R, T, B = 60, 20, 30, 45
@@ -86,6 +86,7 @@ def svg_lines(series, title, xlabel, ylabel, width=720, height=360, logx=False):
     xmax = max(len(ys) for _, ys in series) or 1
     ymax = max((max(ys) if ys else 0) for _, ys in series) or 1
     colors = ('#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#17becf', '#7f7f7f')
+    ylog_max = math.log10(max(ymax, 10))
 
     def X(x):
         if logx:
@@ -93,17 +94,25 @@ def svg_lines(series, title, xlabel, ylabel, width=720, height=360, logx=False):
         return L + pw * (x / xmax)
 
     def Y(y):
+        if logy:
+            return T + ph - ph * (math.log10(max(y, 1)) / ylog_max)
         return T + ph - ph * (y / ymax)
 
     out = ['<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" font-family="sans-serif" font-size="11">'.format(width, height),
            '<rect width="100%" height="100%" fill="white"/>',
            '<text x="{}" y="18" text-anchor="middle" font-size="13">{}</text>'.format(width / 2, title)]
     # grades
-    for i in range(5):
-        y = T + ph * i / 4
-        val = ymax * (1 - i / 4)
-        out.append('<line x1="{}" y1="{:.1f}" x2="{}" y2="{:.1f}" stroke="#ddd"/>'.format(L, y, L + pw, y))
-        out.append('<text x="{}" y="{:.1f}" text-anchor="end" dominant-baseline="middle">{:.0f}</text>'.format(L - 6, y, val))
+    if logy:
+        for k in range(0, int(ylog_max) + 1):
+            y = Y(10 ** k)
+            out.append('<line x1="{}" y1="{:.1f}" x2="{}" y2="{:.1f}" stroke="#ddd"/>'.format(L, y, L + pw, y))
+            out.append('<text x="{}" y="{:.1f}" text-anchor="end" dominant-baseline="middle">{}</text>'.format(L - 6, y, 10 ** k))
+    else:
+        for i in range(5):
+            y = T + ph * i / 4
+            val = ymax * (1 - i / 4)
+            out.append('<line x1="{}" y1="{:.1f}" x2="{}" y2="{:.1f}" stroke="#ddd"/>'.format(L, y, L + pw, y))
+            out.append('<text x="{}" y="{:.1f}" text-anchor="end" dominant-baseline="middle">{:.0f}</text>'.format(L - 6, y, val))
     if logx:
         ticks = [10 ** k for k in range(0, int(math.log10(max(xmax, 10))) + 1)]
     else:
