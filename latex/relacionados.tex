@@ -4,11 +4,12 @@
 %----------------------------------------------------------------------------------
 \chapter{\label{chap:related}Trabalhos Relacionados}
 
-Este capítulo apresenta trabalhos relacionados ao uso de \textit{fuzzing} na verificação funcional de processadores RISC-V. Os trabalhos foram selecionados por abordarem diferentes aspectos necessários à construção de uma campanha de teste: a exploração de estados internos do RTL, a geração de programas válidos e complexos, a diversificação dos operandos e dos resultados das instruções e a mutação de programas em nível de blocos. 
+Este capítulo apresenta trabalhos relacionados ao uso de \textit{fuzzing} na verificação funcional de processadores RISC-V. Os trabalhos foram selecionados por abordarem diferentes aspectos necessários à construção de uma campanha de teste: a exploração de estados internos do RTL, a geração de programas válidos e complexos, a diversificação dos operandos e dos resultados das instruções, a mutação de programas em nível de blocos e a avaliação dos próprios \textit{fuzzers} e dos critérios que os orientam. 
 A apresentação segue a ordem cronológica das publicações:
 \begin{itemize}
     \item A \cref{sec:difuzz} apresenta o DifuzzRTL;
     \item a \cref{sec:cascade} apresenta o Cascade;
+    \item a \cref{sec:encarsia} apresenta o Encarsia;
     \item a \cref{sec:divefuzz} apresenta o DiveFuzz;
     \item a \cref{sec:simfuzz} apresenta o SimFuzz;
 
@@ -32,6 +33,14 @@ O mecanismo central é uma pré-simulação da ISA que permite conhecer valores 
 
 O Cascade demonstra a importância de construir programas cujas instruções sejam efetivamente executadas e de formar dependências intencionais entre operações. Esses princípios podem ser aproveitados sem reproduzir integralmente a pré-simulação. Entretanto, a não terminação não identifica divergências que não alcancem o fluxo de controle; por isso, a comparação de assinaturas fornecida pelo RISCOF permanece necessária neste trabalho.
 
+\section{Encarsia}\label{sec:encarsia}
+
+O Encarsia \citep{encarsia} não é um \textit{fuzzer}, mas uma infraestrutura para avaliá-los. Os autores observam que cada \textit{fuzzer} é demonstrado em processadores diferentes e otimiza uma métrica própria, e que o número de falhas novas encontradas é um critério frágil de comparação, pois as falhas se tornam mais raras à medida que os projetos amadurecem. A partir de um levantamento de 177 correções em quatro processadores RISC-V de código aberto (Ibex, CVA6, Rocket e BOOM), o trabalho constata que as falhas observáveis pelo software se reduzem a dois padrões: trocas de sinais em atribuições e expressões e erros em comandos condicionais.
+
+Com base nessa observação, o Encarsia injeta falhas automaticamente na representação intermediária do Yosys, trocando conexões entre sinais ou removendo e alterando casos das árvores de multiplexadores que representam as atribuições condicionais. Um circuito que compara o projeto original ao modificado é submetido à verificação formal, de modo que apenas falhas com efeito observável nos registradores arquiteturais entram no corpus. Com 90 falhas assim obtidas em Ibex, Rocket e BOOM, os autores comparam DifuzzRTL, ProcessorFuzz e Cascade sob as mesmas condições. Nenhum dos três detectou mais de 42\% das falhas em 24 horas; DifuzzRTL e ProcessorFuzz encontraram exatamente o mesmo conjunto de falhas com e sem a orientação por cobertura; e os três detectaram conjuntos distintos de falhas, diferença que os autores atribuem aos programas gerados, e não ao mecanismo de realimentação.
+
+Para este trabalho, o Encarsia é relevante em dois pontos. Primeiro, propõe que a medida adequada de um \textit{fuzzer} é a detecção de falhas conhecidas, e não a cobertura alcançada. Segundo, mostra que métricas estruturais, como os registradores de controle do DifuzzRTL e as transições de CSR do ProcessorFuzz, não alteraram as falhas encontradas, e aponta como direção futura a realimentação funcional a partir de componentes da microarquitetura. Essas conclusões orientaram a escolha das fontes de sinal consideradas para o \textit{fuzzer} do RS5, discutida no \cref{chap:bg}.
+
 \section{DiveFuzz}\label{sec:divefuzz}
 
 O DiveFuzz \citep{divefuzz} busca aumentar a diversidade dos estados arquiteturais exercitados durante o \textit{fuzzing}. O trabalho observa que programas distintos podem produzir repetidamente os mesmos valores e que a frequência das instruções efetivamente executadas pode permanecer desequilibrada, mesmo quando os códigos de operação são gerados com probabilidades semelhantes.
@@ -50,7 +59,7 @@ O SimFuzz relaciona-se diretamente com este trabalho por adotar mutações em n�
 
 \section{\label{sec:compare}Comparação com os trabalhos relacionados}
 
-A Tabela~\ref{tab:comparacao-relacionados} sintetiza as características dos quatro trabalhos e as contrapõe à abordagem proposta. A estratégia de geração ou mutação indica como o espaço de programas é explorado, enquanto o critério de seleção ou feedback determina quais entradas são priorizadas a partir das informações disponíveis. O oráculo é apresentado separadamente, pois somente ele determina se o comportamento observado diverge da ISA.
+A Tabela~\ref{tab:comparacao-relacionados} sintetiza as características dos cinco trabalhos e as contrapõe à abordagem proposta. A estratégia de geração ou mutação indica como o espaço de programas é explorado, enquanto o critério de seleção ou feedback determina quais entradas são priorizadas a partir das informações disponíveis. O oráculo é apresentado separadamente, pois somente ele determina se o comportamento observado diverge da ISA.
 
 \begin{table}[H]
     \centering
@@ -67,6 +76,8 @@ A Tabela~\ref{tab:comparacao-relacionados} sintetiza as características dos qua
         \hline
         Cascade & PicoRV32, Kronos, VexRiscv, Rocket e CVA6 em ordem; BOOM superescalar fora de ordem & Geração de programas sintéticos longos em blocos básicos, com pré-simulação & Não utiliza feedback de execução; a pré-simulação orienta a construção & Não terminação causada pela propagação de divergências ao fluxo de controle \\
         \hline
+        Encarsia & Ibex e Rocket em ordem; BOOM superescalar fora de ordem, com falhas injetadas & Não gera programas; injeta falhas no RTL (trocas de sinais e condicionais quebradas) para avaliar DifuzzRTL, ProcessorFuzz e Cascade & Avalia os critérios dos demais; a cobertura estrutural não alterou as falhas detectadas & Execução diferencial dos \textit{fuzzers} avaliados, com uma falha injetada por projeto \\
+        \hline
         DiveFuzz & Rocket, CVA6 e NutShell em ordem; XiangShan superescalar fora de ordem & Construção dinâmica de instruções com operandos dependentes do contexto & Diversidade dos resultados e balanceamento dos códigos de operação & Comparação dos resultados com um simulador da ISA \\
         \hline
         SimFuzz & Rocket em ordem; BOOM e XiangShan superescalares fora de ordem & Mutação em blocos de casos históricos que revelaram falhas & Similaridade entre instruções; cobertura utilizada apenas na avaliação & Comparação diferencial com simuladores da ISA \\
@@ -77,10 +88,8 @@ A Tabela~\ref{tab:comparacao-relacionados} sintetiza as características dos qua
     }
 \end{table}
 
-A comparação evidencia duas estratégias predominantes. DifuzzRTL e DiveFuzz geram instruções em granularidade fina e utilizam informações da execução para direcionar novas entradas. Cascade e SimFuzz preservam uma estrutura maior dos programas, mas partem, respectivamente, de sequências sintéticas e de casos históricos de falhas. As abordagens também distinguem os critérios que orientam a exploração dos mecanismos empregados para verificar a correção: cobertura, diversidade ou similaridade orientam a construção ou a escolha das entradas, enquanto a execução diferencial ou a não terminação identifica possíveis falhas.
+A comparação evidencia duas estratégias predominantes. DifuzzRTL e DiveFuzz geram instruções em granularidade fina e utilizam informações da execução para direcionar novas entradas. Cascade e SimFuzz preservam uma estrutura maior dos programas, mas partem, respectivamente, de sequências sintéticas e de casos históricos de falhas. O Encarsia ocupa um papel distinto: não gera entradas, mas fornece o meio de comparar as demais abordagens e questiona o valor dos critérios estruturais que as orientam. As abordagens também distinguem os critérios que orientam a exploração dos mecanismos empregados para verificar a correção: cobertura, diversidade ou similaridade orientam a construção ou a escolha das entradas, enquanto a execução diferencial ou a não terminação identifica possíveis falhas.
 
 Este trabalho combina elementos dessas estratégias em uma infraestrutura voltada ao RS5. Assim como no SimFuzz, as mutações ocorrem em nível de bloco e procuram preservar o fluxo de controle. A formação de dependências e a variação de operandos são motivadas pelo Cascade e pelo DiveFuzz. A diferença está no corpus composto por blocos de aplicações reais, em vez de programas inteiramente sintéticos ou casos históricos, e no uso conjunto da diversidade estrutural e da cobertura para selecionar entradas. O oráculo não constitui uma nova contribuição: a correção é determinada pela comparação de assinaturas entre o RS5 e o Sail já fornecida pelo RISCOF.
 
 Outra lacuna observada é que os trabalhos comparados não têm como foco a avaliação sistemática de diferentes configurações de uma mesma implementação. A campanha proposta executará os programas gerados em combinações de extensões da ISA, políticas de encaminhamento, tamanhos de fila de instruções, organizações de memória e latências de resposta. Desse modo, a avaliação buscará verificar não apenas a conformidade das instruções, mas também sua interação com os diferentes caminhos internos disponibilizados pela parametrização do RS5.
-
-\hl{adicionar encarsia}
