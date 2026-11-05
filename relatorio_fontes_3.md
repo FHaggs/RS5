@@ -29,6 +29,8 @@ gráficos em [riscof/fuzzer/results/2026-10-29-saturacao/](riscof/fuzzer/results
   252 por 10 000) e **1199 arestas que nenhum dos 600 000 programas aleatórios atingiu**, contra 435
   do corpus aleatório com a mesma taxa de mutação. É a primeira evidência de que a seleção de pais
   pelo sinal leva a lugares que o sorteio não leva; ela aparece só depois de ~100 000 casos.
+  **Leitura corrigida em 2026-11-05, ver seção 6:** uma rodada aleatória nova alcança tantas arestas
+  inéditas quanto a guiada, então isso não é evidência de estados inacessíveis ao sorteio.
 - O bug da interrupção dispara em 0,38% dos casos aleatórios (750 a 790 por rodada), sempre a
   partir do caso ~50. Para a ablação ele é um bug "fácil"; mutantes mais difíceis serão necessários.
 
@@ -146,3 +148,23 @@ source riscof/fuzzer/env.sh && cd riscof
 bash fuzzer/results/2026-10-29-saturacao/run_sat.sh      # 8 rodadas de 200k (ajustar EXP e MODEL)
 python3 fuzzer/saturation_report.py <rodadas...> -o <saída>
 ```
+
+## 6. Correção de 2026-11-05: arestas exclusivas em base comparável
+
+A comparação "1199 exclusivas da guiada contra 435 do corpus aleatório" mede o sinal contra a
+mutação sem sinal, mas não contra o sorteio. Na mesma base (arestas fora da união de **duas**
+rodadas aleatórias, 400 000 programas), recalculado dos mapas:
+
+| Rodada | 8 000 programas | 200 000 programas |
+|---|---|---|
+| terceira rodada aleatória | 2007–2067 | 1745–1806 |
+| guiada pela fonte 0 | 966–1170 | 1603–1729 |
+| mutação sem sinal (corpus aleatório) | 801–1031 | 629–850 |
+
+A guiada passou de metade para 92–96% da contribuição de uma rodada aleatória nova, e de 1,2 para
+2,3 vezes a da mutação sem sinal. Ela **não** alcança mais estados inéditos que o sorteio, e no
+total continua 8% abaixo. O que é dela: revisita o que é raro (das 11 815 arestas vistas em até 5
+programas de uma rodada aleatória, alcança 7052 com mediana de 6 programas cada; outra rodada
+aleatória alcança 8533 com mediana 2) e cresce mais no fim (1607 arestas novas nos últimos 50 000
+programas contra 1388–1427). Mantida a tendência da razão (+3 pontos por duplicação do
+orçamento), o cruzamento ficaria na ordem de um milhão de programas; não foi medido.
