@@ -1,6 +1,104 @@
 \chapter{\label{chap:previo}Infraestrutura de \textit{Fuzzing} e Estudo das Fontes de Realimentação}
 
-Este capítulo descreve o trabalho já realizado. Antes de construir o gerador de programas definitivo, foi necessário decidir qual sinal do processador orientará a exploração, pois essa escolha determina o que o \textit{fuzzer} considera um comportamento novo. A \cref{sec:previo-fontes} apresenta os sinais levantados como candidatos. A \cref{sec:previo-impl} descreve a infraestrutura de \textit{fuzzing} construída sobre o RISCOF para compará-los. A \cref{sec:previo-exp} apresenta os experimentos e seus resultados, e a \cref{sec:previo-remarks} reúne as considerações que orientam a continuidade do trabalho.
+Este capítulo descreve o trabalho já realizado. Antes de construir o gerador de programas definitivo, foi necessário decidir qual sinal do processador orientará a exploração, pois essa escolha determina o que o \textit{fuzzer} considera um comportamento novo. Para isso foram construídos um gerador preliminar e uma infraestrutura de \textit{fuzzing} sobre o RISCOF, usados em um estudo das fontes de realimentação. A \cref{sec:previo-gerador} descreve o gerador de programas, suas limitações e a evolução prevista. A \cref{sec:previo-fontes} apresenta os sinais levantados como candidatos. A \cref{sec:previo-impl} descreve a infraestrutura, que inclui a primeira contribuição deste trabalho ao repositório do RS5. A \cref{sec:previo-exp} apresenta os experimentos e seus resultados, e a \cref{sec:previo-remarks} reúne as considerações que orientam a continuidade do trabalho.
+
+\section{Gerador de programas}\label{sec:previo-gerador}
+
+O gerador produz os programas de teste. A versão descrita aqui é preliminar: foi construída para viabilizar o estudo das fontes de realimentação, e seus blocos são sintéticos. Ela já tem, porém, a organização prevista para o gerador final, em que um programa é uma sequência de blocos e as mutações atuam sobre essa sequência.
+
+\subsection{Estrutura de um programa}\label{sec:previo-gerador-estrutura}
+
+Cada programa é um teste no formato do RISCOF e tem três partes. O prólogo atribui um valor inicial a cada registrador de uso geral e aponta um registrador reservado para uma região de 64 palavras de memória, também inicializada. O corpo é formado por três a oito blocos. O epílogo grava os registradores na assinatura. Como a região de memória também pertence à assinatura, tudo o que o corpo calcula ou armazena é comparado com o Sail. Os valores iniciais são sorteados, e 30\% deles vêm de um conjunto de valores de borda, como zero, $-1$ e o maior e o menor inteiros com sinal.
+
+Internamente, um programa é descrito por uma lista de pares formados por um tipo de bloco e uma semente, além de duas sementes para os valores iniciais. Cada bloco é expandido em instruções por um gerador pseudoaleatório próprio, iniciado com a sua semente, de modo que alterar um bloco preserva a estrutura dos demais. Apenas os registradores escritos recentemente, usados para formar dependências, passam de um bloco ao seguinte. Essa descrição compacta é o que o corpus armazena e o que as mutações modificam.
+
+A \cref{tab:blocos} lista os tipos de bloco. Em todos eles, cada operando é, com probabilidade de 50\%, um dos quatro registradores escritos mais recentemente, o que cria entre instruções próximas as dependências que acionam o encaminhamento e as bolhas. Os blocos são construídos para que o programa sempre termine e para que o RS5 e o Sail produzam a mesma assinatura quando o processador está correto: os laços usam um contador reservado, os acessos à memória ficam dentro da região inicializada e valores que diferem legitimamente entre os dois modelos não chegam à assinatura. É o caso dos contadores de desempenho, cujo valor lido é descartado, e dos campos de \texttt{mstatus} e \texttt{mie} que os modelos inicializam de forma distinta, que são mascarados.
+
+\begin{table}[H]
+    \centering
+    \caption{Tipos de bloco do gerador. Os três últimos existem apenas na versão com \textit{traps}.}
+    \label{tab:blocos}
+    \small
+    \begin{tabular}{|p{2.7cm}|p{7.3cm}|p{4.6cm}|}
+        \hline
+        \textbf{Bloco} & \textbf{Conteúdo} & \textbf{Mecanismo exercitado} \\
+        \hline
+        Lógico e aritmético & 4 a 14 operações entre registradores ou com imediatos, deslocamentos, \texttt{lui} e \texttt{auipc} & Encaminhamento entre instruções consecutivas \\
+        \hline
+        Memória & 3 a 8 sequências de \textit{loads} e \textit{stores} de palavra, meia palavra e \textit{byte}, com uso imediato do valor lido e \textit{load} logo após \textit{store} & Bolhas por dependência de \textit{load}; \textit{stall} da memória de dados \\
+        \hline
+        Multiplicação e divisão & 2 a 6 operações, parte delas com operandos de borda, e uso imediato do resultado & \textit{Hold} e encaminhamento ao fim de operações de múltiplos ciclos \\
+        \hline
+        Desvio & 1 a 3 desvios condicionais para frente sobre 1 a 4 instruções & Desvio não predito e descarte das instruções buscadas \\
+        \hline
+        Laço & 1 a 5 iterações de um corpo com operações aritméticas, acessos à memória, multiplicações e divisões & Predição de desvio para trás, desfeita na última iteração \\
+        \hline
+        Salto & 1 a 3 saltos diretos ou indiretos sobre 1 a 3 instruções & Salto predito na decodificação ou resolvido na execução \\
+        \hline
+        CSR & 2 a 6 leituras e escritas em \texttt{mscratch}, \texttt{mstatus} e \texttt{mie} e leituras de contadores & Banco de CSRs \\
+        \hline
+        Misto & Um dos tipos anteriores, definido pela semente & \\
+        \hline
+        Exceção & 1 a 3 exceções em modo de máquina: chamada de sistema, ponto de parada, instrução ilegal, escrita em CSR somente de leitura e acesso ou salto desalinhado & Entrada e retorno de \textit{trap} \\
+        \hline
+        Interrupção & Habilita a interrupção de temporizador, executa 1 a 3 instruções e desabilita as interrupções & Aceitação de interrupção sobre instruções de classes diferentes \\
+        \hline
+        Modo de usuário & Passa ao modo de usuário, executa 2 a 6 operações, em 30\% dos casos com um acesso ilegal a CSR, e retorna por chamada de sistema & Troca de modo de privilégio \\
+        \hline
+    \end{tabular}
+\end{table}
+
+A versão com \textit{traps} acrescenta ao programa um tratador. Ele registra a causa de cada \textit{trap} em uma região da assinatura, avança o endereço de retorno sobre a instrução que provocou a exceção e sempre retorna em modo de máquina, o que permite encerrar um trecho em modo de usuário com uma chamada de sistema. Em uma interrupção, o tratador registra apenas a causa e desabilita a interrupção de temporizador. O endereço de retorno não é registrado nesse caso, porque o RS5 e o Sail podem aceitar a mesma interrupção em instruções diferentes sem que isso constitua um erro.
+
+A \cref{fig:exemplo-blocos} mostra três blocos gerados. Um programa tem em média 5,5 blocos, que somam pouco mais de 40 instruções. Sua execução completa, incluído o código de inicialização do RISCOF, leva em média 233 instruções e 339 ciclos sem \textit{traps}, e 288 instruções e 417 ciclos com \textit{traps}.
+
+\begin{figure}[htb]
+\small
+\begin{verbatim}
+    # bloco de memória
+    sh    x9, 138(x31)
+    lbu   x16, 138(x31)     # load logo após store no mesmo endereço
+    lh    x1, 152(x31)
+    and   x18, x1, x21      # uso imediato do valor lido
+    # bloco de laço
+    li    x2, 3
+Lb1:
+    divu  x27, x5, x11      # operação de múltiplos ciclos
+    slt   x5, x27, x15      # uso imediato do resultado
+    sb    x5, 210(x31)
+    addi  x2, x2, -1
+    bnez  x2, Lb1           # desvio para trás
+    # bloco de interrupção
+    li    x29, 0x80
+    csrs  mie, x29          # habilita a interrupção de temporizador
+    csrsi mstatus, 8        # habilita as interrupções
+    andi  x15, x26, -329
+    csrci mstatus, 8        # desabilita as interrupções
+\end{verbatim}
+    \caption{Três blocos produzidos pelo gerador. O registrador \texttt{x31} aponta para a região de memória do programa. Os comentários foram acrescentados.}
+    \label{fig:exemplo-blocos}
+\end{figure}
+
+\subsection{Corpus e mutação}\label{sec:previo-gerador-mutacao}
+
+Quando nenhuma fonte guia a exploração, todo programa é gerado do zero: o número de blocos e o tipo e a semente de cada um são sorteados. Quando há realimentação, os programas que não divergem do Sail e trazem novidade nas fontes escolhidas entram no corpus, com a energia calculada pelo \textit{fuzzer} (\cref{sec:bg-fuzzing}). A partir daí, 80\% dos programas são mutações de um pai sorteado em proporção à sua energia, e os demais continuam a ser gerados do zero.
+
+Seis operadores de mutação atuam sobre a lista de blocos: substituição de um bloco por outro, do mesmo tipo ou de um tipo sorteado; inserção de um bloco; remoção de um bloco; troca de posição entre dois blocos; recombinação com o trecho final de outro programa do corpus; e novo sorteio dos valores iniciais dos registradores ou da memória.
+
+\subsection{Limitações e evolução prevista}\label{sec:previo-gerador-planos}
+
+O gerador atual tem cinco limitações, a maior parte delas evidenciada pelos experimentos da \cref{sec:previo-exp}. Cada uma define uma frente de trabalho.
+
+\begin{description}
+    \item[Blocos sintéticos.] Os blocos atuais combinam instruções de uma mesma classe e não reproduzem os padrões de dependência e de acesso à memória de programas reais. Eles serão substituídos pelo corpus de blocos extraídos de aplicações (\cref{obj:2}), cuja composição exigirá renomear registradores e ajustar operandos (\cref{obj:3}).
+
+    \item[Mutação pouco granular.] Cada operador preserva um bloco por inteiro ou o sorteia de novo, e por isso um programa mutado repete quase todos os estados de seu pai. Nas rodadas guiadas, um programa mutado trouxe de 0,2 a 1,2 aresta nova do \textit{pipeline}, contra 3,8 de um programa gerado do zero, e o operador que mantém todas as instruções e sorteia apenas os valores iniciais foi o que menos rendeu. Serão acrescentados operadores que atuam dentro do bloco, com substituição de registradores, alteração de operandos, reordenação de instruções e modificação das dependências, preservada a estrutura de controle, e operadores que alteram mais de um bloco por vez (\cref{obj:3}).
+
+    \item[Proporção fixa de mutações.] A fração de 80\% foi fixada de antemão e custa estados enquanto gerar do zero rende mais do que mutar. Essa proporção passará a acompanhar o rendimento medido de cada origem, como parte do critério que decide quais combinações de blocos e mutações priorizar (\cref{obj:4}).
+
+    \item[Situações fora do alcance.] Os \textit{bins} que permaneceram em zero apontam composições que o gerador não produz: uma interrupção aceita sobre um desvio, um salto ou uma instrução de sistema; uma exceção logo após uma operação de múltiplos ciclos; um \textit{load} cujo resultado é o endereço do acesso ou do salto seguinte; e um retorno de \textit{trap} executado em modo de usuário. Nenhuma quantidade de programas as alcança. Elas exigem novas composições, como permitir que a janela de interrupção envolva qualquer tipo de bloco.
+
+\end{description}
 
 \section{Sinais candidatos a realimentação}\label{sec:previo-fontes}
 
@@ -20,7 +118,37 @@ Um \textit{fuzzer} orientado por cobertura depende de um sinal que indique se um
 
 \section{Implementação do \textit{fuzzer} sobre o RISCOF}\label{sec:previo-impl}
 
-A \cref{fig:fluxo} mostra o caminho de um programa. O \textit{fuzzer} reutiliza os componentes da integração do RS5 com o RISCOF: o formato de teste e suas macros, o \textit{script} de ligação, o \textit{testbench} e as opções de compilação do modelo no Verilator e de execução do Sail. Cada programa gerado é um teste válido do RISCOF. Ele é compilado com as mesmas ferramentas e executado no RS5 e no Sail, e as assinaturas são comparadas. Os programas que divergem ou que trazem novidade são salvos como uma suíte que o próprio RISCOF consegue reexecutar. Cada programa é processado de ponta a ponta por um processo, e vários processos executam em paralelo; a vazão medida foi de 60 a 90 programas por segundo com 7 a 12 processos.
+A primeira contribuição deste trabalho foi feita na própria integração do RS5 com o RISCOF. Nela, os endereços de início e de fim da assinatura, o endereço cuja escrita encerra o teste e o nome do arquivo de saída eram parâmetros do \textit{testbench}. Como parâmetros são fixados na compilação, o Verilator traduzia e compilava o modelo do RS5 novamente para cada teste. A alteração passou esses quatro valores para argumentos lidos no início da simulação, de modo que o modelo é compilado uma única vez e cada teste apenas o executa. Ela foi incorporada ao repositório do RS5\footnote{\url{https://github.com/gaph-pucrs/RS5/pull/72}}.
+
+A \cref{tab:riscof-tempo} mostra o efeito sobre a suíte de testes arquiteturais da configuração usada neste trabalho, composta por 62 testes. O tempo de CPU cai cerca de nove vezes. O ganho no tempo de relógio depende do número de núcleos, porque o fluxo anterior compilava os 62 modelos em paralelo: com 8 núcleos, a etapa do RS5 cai de cerca de 96 para 15 segundos, e com 56 núcleos, de 24 para 13 segundos. O restante do fluxo não é afetado: cerca de 35 segundos de preparação do RISCOF e 6 segundos de execução no Sail.
+
+\begin{table}[H]
+    \centering
+    \caption{Execução da suíte de 62 testes arquiteturais antes e depois da alteração. A etapa do RS5 inclui a compilação do modelo e a montagem e a simulação dos testes. Medidas em um servidor compartilhado com dois processadores AMD EPYC 7453, com a execução restrita a 8 ou a 56 núcleos lógicos e sem reaproveitamento de compilações anteriores; duas execuções com 8 núcleos e três com 56.}
+    \label{tab:riscof-tempo}
+    \small
+    \begin{tabular}{|l|r|r|}
+        \hline
+        \textbf{Medida} & \textbf{Antes} & \textbf{Depois} \\
+        \hline
+        Compilações do modelo & 62 & 1 \\
+        \hline
+        Tempo de CPU, 8 núcleos & 728 a 775 s & 80 s \\
+        \hline
+        Etapa do RS5, 8 núcleos & 93 a 99 s & 15 a 16 s \\
+        \hline
+        Fluxo completo, 8 núcleos & 135 a 137 s & 60 s \\
+        \hline
+        Etapa do RS5, 56 núcleos & 23 a 24 s & 12 a 15 s \\
+        \hline
+        Fluxo completo, 56 núcleos & 62 a 64 s & 51 a 56 s \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Para o \textit{fuzzer}, a alteração é um requisito. Com o modelo compilado uma única vez, o custo de um programa novo é o de montá-lo e simulá-lo, da ordem de dezenas de milissegundos. No fluxo anterior, cada programa exigiria uma compilação do modelo, que leva cerca de 7 segundos nas mesmas condições, e as campanhas de 200.000 programas da \cref{sec:previo-exp} não seriam viáveis.
+
+A \cref{fig:fluxo} mostra o caminho de um programa. O \textit{fuzzer} reutiliza os componentes da integração do RS5 com o RISCOF: o formato de teste e suas macros, o \textit{script} de ligação, o \textit{testbench} e as opções de compilação do modelo no Verilator e de execução do Sail. Cada programa gerado é um teste válido do RISCOF. Ele é compilado com as mesmas ferramentas e executado no RS5 e no Sail, e as assinaturas são comparadas. Os programas que divergem ou que trazem novidade são salvos como uma suíte que o próprio RISCOF consegue reexecutar. Cada programa é processado de ponta a ponta por um processo, e vários processos executam em paralelo; a vazão medida foi de 60 a 90 programas por segundo com 7 a 12 processos. Essa infraestrutura atende ao \cref{obj:1}.
 
 \begin{figure}[htb]
     \centering
@@ -29,9 +157,7 @@ A \cref{fig:fluxo} mostra o caminho de um programa. O \textit{fuzzer} reutiliza 
     \label{fig:fluxo}
 \end{figure}
 
-Um programa é composto por um prólogo, que inicializa os registradores e uma região de memória, por três a oito blocos e por um epílogo, que grava os registradores na assinatura. Nesta versão preliminar os blocos são sintéticos e organizados por classe de instrução: operações lógicas e aritméticas, acessos à memória, multiplicação e divisão, desvios, laços, saltos e acessos a CSRs. Cada bloco favorece o uso de registradores escritos há pouco, para formar dependências entre instruções. O corpus de blocos extraídos de aplicações reais, previsto nos objetivos, substituirá esses blocos. As mutações atuam sobre blocos inteiros: substituição, inserção, remoção, troca de posição, recombinação entre dois programas e alteração dos valores iniciais. Quando há corpus, 80\% dos programas são mutações de um pai sorteado conforme sua energia, e os demais são gerados do zero.
-
-Uma segunda versão do gerador acrescenta \textit{traps}. O programa passa a incluir um tratador que registra a causa na assinatura, avança sobre a instrução que a provocou e retorna. O gerador ganha três tipos de bloco: exceções (chamadas de sistema, instruções ilegais, escritas em CSRs somente de leitura e acessos desalinhados), interrupções de temporizador habilitadas em torno de uma a três instruções, e trechos executados em modo de usuário. Valores que diferem legitimamente entre o RS5 e o Sail não chegam à assinatura, como os contadores de desempenho e o endereço de retorno de uma interrupção, que depende do ciclo em que ela é aceita.
+Os programas vêm do gerador descrito na \cref{sec:previo-gerador}, e a realimentação devolve a ele o corpus e a energia de cada programa.
 
 As fontes são capturadas por módulos SystemVerilog ligados ao RS5 pela construção \texttt{bind}, sem alteração do RTL. Cada fonte ocupa uma região do mapa, com contadores gravados ao final da simulação, e o \textit{fuzzer} aplica a cada região a regra de \textit{buckets} e de novidade. Todas as fontes são registradas em todas as execuções; a linha de comando define quais delas decidem a entrada no corpus e a energia, e a geração sem realimentação é o mesmo \textit{fuzzer} com esse conjunto vazio. As sondas custam cerca de 1~ms por programa, 5\% do tempo de simulação, enquanto a instrumentação de cobertura do Verilator triplica esse tempo, de 18,5 para 54,9~ms.
 
@@ -130,35 +256,7 @@ Os \textit{traps} importam também pelo que exercitam. Exceções, interrupçõe
 
 Quanto às fontes, as arestas do \textit{pipeline} serão a fonte principal do \textit{fuzzer}: é a única que não se esgota, mantém resolução para distinguir programas ao longo de toda a campanha e corresponde à realimentação funcional que o Encarsia recomenda. As transições de CSRs serão usadas como fonte complementar. Seu espaço é pequeno, mas ela favoreceu a única falha encontrada, o que é coerente com a proposta do ProcessorFuzz nesse caso e não contradiz o Encarsia, cujo resultado se refere a conjuntos de falhas distribuídas pelo projeto. A cobertura do Verilator fica restrita ao relato dos resultados, e os \textit{bins}, ao diagnóstico do gerador.
 
-Os experimentos deste capítulo não avaliam o \textit{fuzzer} proposto: são um estudo da saturação das fontes, feito com um gerador e um mutador provisórios. Nesse cenário a exploração guiada ficou abaixo da geração aleatória no total de estados, pelas duas limitações apontadas na \cref{sec:previo-guiada}. Ambas pertencem ao gerador, e não ao sinal, e a tendência medida é favorável: a desvantagem cai de 34\% para 8\% entre 1.000 e 200.000 programas, e a escolha dos pais pelo sinal supera a escolha ao acaso em todos os orçamentos. Por isso, a proposta para a continuidade do trabalho é melhorar o gerador e a mutação até que a exploração guiada supere a geração aleatória nos estados alcançados. Espera-se que o corpus de blocos extraídos de aplicações reais aprofunde o espaço de estados, por trazer cadeias de dependência mais longas entre as instruções, e os operadores de mutação passarão a alterar mais de um bloco, para que um programa mutado se afaste mais de sua origem. A hipótese é que, em um espaço mais profundo, partir dos programas que alcançaram estados raros renda mais do que sortear programas novos.
+Os experimentos deste capítulo não avaliam o \textit{fuzzer} proposto: são um estudo da saturação das fontes, feito com um gerador e um mutador provisórios. Nesse cenário a exploração guiada ficou abaixo da geração aleatória no total de estados, pelas duas limitações apontadas na \cref{sec:previo-guiada}. Ambas pertencem ao gerador, e não ao sinal, e a tendência medida é favorável: a desvantagem cai de 34\% para 8\% entre 1.000 e 200.000 programas, e a escolha dos pais pelo sinal supera a escolha ao acaso em todos os orçamentos. Por isso, a proposta para a continuidade do trabalho é melhorar o gerador e a mutação, nas frentes descritas na \cref{sec:previo-gerador-planos}, até que a exploração guiada supere a geração aleatória nos estados alcançados. Espera-se que o corpus de blocos extraídos de aplicações reais aprofunde o espaço de estados, por trazer cadeias de dependência mais longas entre as instruções, e que operadores de mutação mais finos afastem um programa mutado de sua origem. A hipótese é que, em um espaço mais profundo, partir dos programas que alcançaram estados raros renda mais do que sortear programas novos.
 
 O número de estados, porém, é uma medida intermediária: o que se quer do \textit{fuzzer} são falhas encontradas, e até aqui há uma única divergência para sustentar qualquer conclusão nesse sentido. A resposta também depende do orçamento, pois com 8.000 programas a realimentação parece prejudicial e só em campanhas longas sua desvantagem se reduz. O \textit{fuzzer} final será avaliado pelo tempo até a detecção de falhas injetadas no RS5, uma por vez, como propõe o Encarsia, com curvas ao longo do orçamento em lugar de um único ponto e com a geração aleatória como linha de base em todas as comparações.
 
-
-% ---------------------------------------------------------------------------
-% Roteiro original do capítulo (mantido como referência)
-% ---------------------------------------------------------------------------
-% \chapter{Trabalho previo - sugerir titulo para o capitulo}
-% 
-% - Levantamento de sinais para servir como feedback do fuzzer
-%     * Random -> usado como baseline
-%     * Coverage do SystemVerilog
-%     * Estado do pipeline -> OK, apontar para seção que vai detalhar os experimentos
-%         -> Como é um core pequeno, diferencial que pode mapear o pipeline
-%     * CSRs (valores contidos neles)
-%         -> Relacionar ProcessorFuzz com Encarsia - um é oposto do outro, ref com a seção de experimentos
-%     * Bins (propriedades relacionadas entre sinais/registradores) -> justificar por que não foi usado
-%         -> Dá hints da microarquitetura - não é o que procuramos aqui
-%         -> Da muito vies do programador (tentar achar uma referencia aqui)
-% 
-% - Descrever como foi implementado o fuzzer e como ele funciona em conjunto com o RISCOF
-% 
-% - Descrição dos experimentos e resultados
-%     * Random vs. guided - experimentos
-%     * Gráficos
-%     * Resultados
-%     * Falar que com 8000 testes o guided perdeu para o random em estados totais, mas com mais testes ele ganha (o guided consegue achar estados raros, enquanto o random nao, por isso ele ultrapassa)
-% 
-% - Seção final de 'remarks'
-%     * Gerador com traps -- Encarsia cita que o gerador é mais importante (tao importante quanto) o feedback - segue o que foi encontrado
-%         -> É importante a parte de traps devido ao teste de privilégios (modos) de execução - bug é falha de segurança!!!!!
