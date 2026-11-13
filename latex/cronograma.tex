@@ -1,0 +1,85 @@
+\chapter{\label{chap:cronograma}Cronograma}
+
+Este capítulo apresenta as atividades previstas para o primeiro semestre de 2027 e as relaciona aos objetivos específicos definidos no \cref{chap:intro}. A \cref{sec:crono-objetivos} avalia a situação de cada objetivo a partir do trabalho descrito no \cref{chap:previo}, e a \cref{sec:crono-atividades} apresenta o cronograma e descreve as atividades.
+
+\section{Situação dos objetivos}\label{sec:crono-objetivos}
+
+Três objetivos já foram atingidos e, por isso, não aparecem no cronograma.
+
+\begin{itemize}
+    \item O \cref{obj:1} foi atingido pela infraestrutura da \cref{sec:previo-impl}. Cada programa gerado é um teste no formato do RISCOF, compilado com as mesmas ferramentas e executado no RS5 e no Sail, e as assinaturas são comparadas. A alteração que passou a compilar o modelo uma única vez foi incorporada ao repositório do RS5.
+
+    \item O \cref{obj:5} foi atingido pela integração da cobertura do Verilator como uma das fontes de realimentação (\cref{sec:previo-fontes}). Ela é coletada a cada programa e pode decidir a entrada no corpus. Os experimentos da \cref{sec:previo-sat} mostraram que essa cobertura se esgota em centenas de programas, o que definiu o seu papel: critério complementar de avaliação, e não a fonte principal de seleção.
+
+    \item O \cref{obj:8} foi atingido pelo oráculo do \textit{fuzzer}. Todo programa cuja assinatura difere da produzida pelo Sail é salvo com os arquivos necessários para reproduzi-lo, na forma de um teste do RISCOF. O mecanismo já revelou uma divergência no RS5, reproduzida por um teste dirigido (\cref{sec:previo-bug}).
+\end{itemize}
+
+Quatro objetivos foram atingidos em parte, e o cronograma cobre o que falta. Para o \cref{obj:3}, o gerador já combina blocos e os modifica com seis operadores (\cref{sec:previo-gerador-mutacao}), mas todos atuam sobre blocos inteiros; faltam as mutações internas ao bloco. Para o \cref{obj:4}, o mapa de realimentação, a regra de novidade e a energia estão implementados, e as fontes que orientarão a exploração foram escolhidas (\cref{sec:previo-remarks}), mas a decisão entre gerar um programa e mutar um existente ainda é uma proporção fixa. Para o \cref{obj:6}, o \textit{fuzzer} recebe a descrição da ISA e os parâmetros da microarquitetura e compila o modelo correspondente, mas a execução sobre um conjunto de configurações não está automatizada. Para o \cref{obj:9}, os experimentos da \cref{sec:previo-exp} são uma avaliação preliminar, restrita às fontes de realimentação.
+
+Os \cref{obj:2,obj:7} não foram iniciados: os blocos atuais são sintéticos, e todas as campanhas usaram uma única configuração do processador.
+
+\section{Atividades}\label{sec:crono-atividades}
+
+A \cref{tab:cronograma} distribui as atividades ao longo do semestre. A lista que a segue descreve cada atividade, os objetivos que ela cumpre e o resultado esperado.
+
+\begin{table}[H]
+    \centering
+    \caption{Cronograma das atividades para o primeiro semestre de 2027.}
+    \label{tab:cronograma}
+    \small
+    \begin{tabular}{|l|l|c|c|c|c|c|c|}
+        \hline
+        \multicolumn{2}{|l|}{\textbf{Atividade}} & \textbf{Jan} & \textbf{Fev} & \textbf{Mar} & \textbf{Abr} & \textbf{Mai} & \textbf{Jun} \\
+        \hline
+        \ref{atv:corpus} & Corpus de blocos de aplicações reais & X & X &   &   &   &   \\
+        \hline
+        \ref{atv:mutacao} & Mutação e composição dos blocos &   & X & X &   &   &   \\
+        \hline
+        \ref{atv:criterio} & Critério de mutação &   &   & X & X &   &   \\
+        \hline
+        \ref{atv:config} & Automação das configurações &   &   & X &   &   &   \\
+        \hline
+        \ref{atv:falhas} & Falhas injetadas para a avaliação &   &   &   & X &   &   \\
+        \hline
+        \ref{atv:campanhas} & Campanhas em diferentes configurações &   &   &   & X & X &   \\
+        \hline
+        \ref{atv:avaliacao} & Avaliação da abordagem &   &   &   &   & X & X \\
+        \hline
+        \ref{atv:redacao} & Redação do volume final &   &   &   &   & X & X \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{atividades}
+    \item \label{atv:corpus} \textbf{Corpus de blocos de aplicações reais.} Selecionar aplicações que contenham os padrões computacionais citados na introdução, como reduções, transformações de elementos, produtos escalares e operações matriciais, compilá-las para a ISA do RS5 e extrair blocos delimitados por transferências de controle, com a anotação dos registradores e das regiões de memória que cada bloco usa. Cumpre o \cref{obj:2}. Resultado esperado: um corpus de blocos integrado ao gerador, em substituição aos blocos sintéticos.
+
+    \item \label{atv:mutacao} \textbf{Mutação e composição dos blocos.} Implementar os operadores que atuam dentro do bloco, com substituição de registradores, alteração de operandos, reordenação de instruções e modificação das dependências, preservada a estrutura de controle. Implementar também os operadores que alteram mais de um bloco e as composições que o gerador atual não produz (\cref{sec:previo-gerador-planos}). Completa o \cref{obj:3}. Resultado esperado: programas mutados que tragam mais estados novos do que os da versão atual, medidos em arestas novas por programa nas condições da \cref{sec:previo-guiada}.
+
+    \item \label{atv:criterio} \textbf{Critério de mutação.} Substituir a proporção fixa de mutações por um critério que acompanhe o rendimento medido de cada origem e de cada operador, com as arestas do \textit{pipeline} como fonte principal e as transições de CSRs como fonte complementar, e ampliar o mapa das arestas. Completa o \cref{obj:4}. Resultado esperado: uma exploração guiada que alcance, com o mesmo número de programas, ao menos tantos estados quanto a geração aleatória.
+
+    \item \label{atv:config} \textbf{Automação das configurações.} Construir o mecanismo que executa uma campanha sobre uma lista de configurações. Para cada combinação de descrição da ISA e de parâmetros da microarquitetura (encaminhamento, predição de desvios, tamanho da fila de instruções, organização e latência da memória), ele compila um modelo, executa os programas e reúne os resultados. Completa o \cref{obj:6}. Resultado esperado: uma campanha sobre várias configurações disparada por um único comando, com as divergências identificadas por configuração.
+
+    \item \label{atv:falhas} \textbf{Falhas injetadas para a avaliação.} Preparar o conjunto de falhas usado na avaliação: alterações no RTL do RS5 dos dois tipos identificados pelo Encarsia, trocas de sinais e condicionais incorretas, cada uma acompanhada de um teste dirigido que comprove que ela é observável na assinatura. Cumpre em parte o \cref{obj:9}. Resultado esperado: um conjunto de versões do RS5 com uma falha cada, distribuídas pelos módulos do processador.
+
+    \item \label{atv:campanhas} \textbf{Campanhas em diferentes configurações.} Executar o \textit{fuzzer} nas configurações preparadas na \cref{atv:config}, variando as extensões suportadas pelo gerador, a política de encaminhamento, o tamanho da fila de instruções, a organização da memória e a sua latência. Cumpre o \cref{obj:7}. Resultado esperado: para cada configuração, os estados alcançados e as divergências encontradas. As divergências confirmadas serão relatadas no repositório do RS5.
+
+    \item \label{atv:avaliacao} \textbf{Avaliação da abordagem.} Comparar a exploração guiada com a geração aleatória, e as fontes de realimentação entre si, pelo tempo até a detecção das falhas da \cref{atv:falhas}, com várias sementes e curvas ao longo do orçamento. Comparar também a cobertura e os estados alcançados com os das suítes \textit{riscv-tests} e do RISCOF. Completa o \cref{obj:9}. Resultado esperado: evidência, favorável ou não, de que a realimentação escolhida encontra falhas antes da geração aleatória, e a relação dos comportamentos que as suítes existentes não exercitam.
+
+    \item \label{atv:redacao} \textbf{Redação do volume final.} Escrever o volume do Trabalho de Conclusão II com os resultados das atividades anteriores e preparar a defesa. Não corresponde a um objetivo específico. Resultado esperado: o volume final.
+\end{atividades}
+
+
+% ---------------------------------------------------------------------------
+% Roteiro original do capítulo (mantido como referência)
+% ---------------------------------------------------------------------------
+% Parágrafo inicial xalala tabela X apresenta as atividades para cumprir os objetivos O2-O9. O objetivo O1 já foic umprido totalmente na cref xXX. O objetivo O2 também foi parcialmente cumprido por tal coisa.
+% 
+% - Tabela de atividades
+% - Cada coluna é um mês JAN-JUN (2027)
+% - Primeira coluna é o número da atividade (A1, A2,A3...)
+% 
+% Após a tabela
+% 
+% - enumerate
+% 
+% A1: O que é a A1. Qual objetivos ela cumpre (total ou parcialmente) - usar CREF para labels dos objetivos. Qual o resultado esperado. Conforme o \cref{obj:1}
