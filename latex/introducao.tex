@@ -123,32 +123,36 @@ Para que essas características sejam preservadas ao longo do processo de geraç
  
 Para atingir o objetivo geral, são definidos os seguintes objetivos específicos:
  
-\begin{enumerate}
-    \item Utilizar o RISCOF como base para a compilação, execução e comparação dos programas de teste no RS5 e no modelo de referência Sail;
+\begin{objetivos}
+    \item \label{obj:1} Utilizar o RISCOF como base para a compilação, execução e comparação dos programas de teste no RS5 e no modelo de referência Sail;
  
-    \item Construir um corpus inicial composto por blocos de Assembly extraídos de aplicações reais, incluindo padrões computacionais como reduções, transformações de elementos, produtos escalares e operações matriciais;
+    \item \label{obj:2} Construir um corpus inicial composto por blocos de Assembly extraídos de aplicações reais, incluindo padrões computacionais como reduções, transformações de elementos, produtos escalares e operações matriciais;
  
-    \item Desenvolver mecanismos para combinar e modificar os blocos do corpus, incluindo substituição de registradores, alteração de operandos, reorganização de instruções e modificação das dependências entre operações, preservando a estrutura de controle de cada bloco durante a mutação;
+    \item \label{obj:3} Desenvolver mecanismos para combinar e modificar os blocos do corpus, incluindo substituição de registradores, alteração de operandos, reorganização de instruções e modificação das dependências entre operações, preservando a estrutura de controle de cada bloco durante a mutação;
  
-    \item Definir um critério de mutação para gerar os programas e utilizá-lo para orientar a seleção de quais combinações de blocos e mutações priorizar para simulação;
+    \item \label{obj:4} Definir um critério de mutação para gerar os programas e utilizá-lo para orientar a seleção de quais combinações de blocos e mutações priorizar para simulação;
  
-    \item Integrar a coleta de cobertura do Verilator ao processo de geração, utilizando a cobertura obtida como critério complementar de avaliação e de seleção de entradas para o corpus;
+    \item \label{obj:5} Integrar a coleta de cobertura do Verilator ao processo de geração, utilizando a cobertura obtida como critério complementar de avaliação e de seleção de entradas para o corpus;
  
-    \item Automatizar a execução dos testes em diferentes configurações da arquitetura de conjunto de instruções e da microarquitetura do RS5;
+    \item \label{obj:6} Automatizar a execução dos testes em diferentes configurações da arquitetura de conjunto de instruções e da microarquitetura do RS5;
  
-    \item Avaliar configurações com diferentes extensões, políticas de encaminhamento, tamanhos da fila de instruções, organizações de memória e ciclos de resposta da memória;
+    \item \label{obj:7} Avaliar configurações com diferentes extensões, políticas de encaminhamento, tamanhos da fila de instruções, organizações de memória e ciclos de resposta da memória;
  
-    \item Detectar e registrar divergências entre o comportamento observado no RS5 e os resultados produzidos pelo modelo Sail;
+    \item \label{obj:8} Detectar e registrar divergências entre o comportamento observado no RS5 e os resultados produzidos pelo modelo Sail;
  
-    \item Avaliar a abordagem proposta com base na cobertura alcançada, na diversidade dos estados testados e na capacidade de revelar comportamentos não contemplados pelas suítes de teste existentes.
-\end{enumerate}
+    \item \label{obj:9} Avaliar a abordagem proposta com base na cobertura alcançada, na diversidade dos estados testados e na capacidade de revelar comportamentos não contemplados pelas suítes de teste existentes.
+\end{objetivos}
  
 Com essa abordagem, espera-se complementar os mecanismos de validação presentes no RS5 com um processo capaz de gerar automaticamente diversos programas voltados à exploração da implementação. 
 A combinação de blocos provenientes de código real, mutações estruturadas, cobertura do RTL como critério complementar de avaliação, execução diferencial e variação automática de parâmetros busca reduzir a dependência de testes manuais e aumentar a probabilidade de exercitar interações complexas entre a arquitetura de conjunto de instruções e a microarquitetura do processador.
 
 A organização do restante do documento é feita da seguinte forma:
-o \cref{chap:related} apresenta os trabalhos relacionados.
-
+\begin{itemize}
+    \item o \cref{chap:bg} apresenta a fundamentação teórica;
+    \item o \cref{chap:related} apresenta os trabalhos relacionados;
+    \item o \cref{chap:previo} apresenta a infraestrutura de \textit{fuzzing} construída e o estudo das fontes de realimentação realizado até aqui;
+    \item o \cref{chap:cronograma} apresenta o cronograma para o cumprimento dos objetivos deste projeto.
+\end{itemize}
 
 % Processador alvo: RS5. 
 %     - Artigo (LASCAS)
