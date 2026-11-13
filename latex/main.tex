@@ -58,19 +58,24 @@
 % Um float do tipo algoritmo. No momento
 % este pacote é incompatível com a classe.
 %\usepackage{algorithm}
-
+\usepackage{enumitem}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Angelo: Pacotes para config de referencias
 \usepackage[authoryear]{natbib}
 \usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
 \usepackage[brazilian]{cleveref}
+\newlist{objetivos}{enumerate}{1}
+\setlist[objetivos]{label=O\arabic*., ref=O\arabic*}
+\crefname{objetivosi}{objetivo}{objetivos}
+\Crefname{objetivosi}{Objetivo}{Objetivos}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% Remover para entrega
 \usepackage{soul}
 %%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %----------------------------------------------------------------
 % Autor (OBRIGATÓRIO)
@@ -197,6 +202,7 @@
 \include{background}
 \include{relacionados}
 \include{previous}
+\include{cronograma}
 
 %----------------------------------------------------------------
 % Aqui vai a bibliografia. Existem 3 estilos de citação: use
