@@ -14,38 +14,40 @@ Internamente, um programa é descrito por uma lista de pares formados por um tip
 
 A \cref{tab:blocos} lista os tipos de bloco. Em todos eles, cada operando é, com probabilidade de 50\%, um dos quatro registradores escritos mais recentemente, o que cria entre instruções próximas as dependências que acionam o encaminhamento e as bolhas. Os blocos são construídos para que o programa sempre termine e para que o RS5 e o Sail produzam a mesma assinatura quando o processador está correto: os laços usam um contador reservado, os acessos à memória ficam dentro da região inicializada e valores que diferem legitimamente entre os dois modelos não chegam à assinatura. É o caso dos contadores de desempenho, cujo valor lido é descartado, e dos campos de \texttt{mstatus} e \texttt{mie} que os modelos inicializam de forma distinta, que são mascarados.
 
-\begin{table}[H]
+\begin{table}[htbp]
     \centering
-    \caption{Tipos de bloco do gerador. Os três últimos existem apenas na versão com \textit{traps}.}
+    \caption{Tipos de bloco do gerador.}
     \label{tab:blocos}
     \small
-    \begin{tabular}{|p{2.7cm}|p{7.3cm}|p{4.6cm}|}
-        \hline
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{4.4cm}@{}}
+        \toprule
         \textbf{Bloco} & \textbf{Conteúdo} & \textbf{Mecanismo exercitado} \\
-        \hline
+        \midrule
         Lógico e aritmético & 4 a 14 operações entre registradores ou com imediatos, deslocamentos, \texttt{lui} e \texttt{auipc} & Encaminhamento entre instruções consecutivas \\
-        \hline
+        \addlinespace
         Memória & 3 a 8 sequências de \textit{loads} e \textit{stores} de palavra, meia palavra e \textit{byte}, com uso imediato do valor lido e \textit{load} logo após \textit{store} & Bolhas por dependência de \textit{load}; \textit{stall} da memória de dados \\
-        \hline
+        \addlinespace
         Multiplicação e divisão & 2 a 6 operações, parte delas com operandos de borda, e uso imediato do resultado & \textit{Hold} e encaminhamento ao fim de operações de múltiplos ciclos \\
-        \hline
+        \addlinespace
         Desvio & 1 a 3 desvios condicionais para frente sobre 1 a 4 instruções & Desvio não predito e descarte das instruções buscadas \\
-        \hline
+        \addlinespace
         Laço & 1 a 5 iterações de um corpo com operações aritméticas, acessos à memória, multiplicações e divisões & Predição de desvio para trás, desfeita na última iteração \\
-        \hline
+        \addlinespace
         Salto & 1 a 3 saltos diretos ou indiretos sobre 1 a 3 instruções & Salto predito na decodificação ou resolvido na execução \\
-        \hline
+        \addlinespace
         CSR & 2 a 6 leituras e escritas em \texttt{mscratch}, \texttt{mstatus} e \texttt{mie} e leituras de contadores & Banco de CSRs \\
-        \hline
-        Misto & Um dos tipos anteriores, definido pela semente & \\
-        \hline
+        \addlinespace
+        Misto & Um dos tipos anteriores, definido pela semente &  \\
+        \midrule
+        \multicolumn{3}{@{}l}{\footnotesize Apenas na versão com \textit{traps}:} \\
         Exceção & 1 a 3 exceções em modo de máquina: chamada de sistema, ponto de parada, instrução ilegal, escrita em CSR somente de leitura e acesso ou salto desalinhado & Entrada e retorno de \textit{trap} \\
-        \hline
+        \addlinespace
         Interrupção & Habilita a interrupção de temporizador, executa 1 a 3 instruções e desabilita as interrupções & Aceitação de interrupção sobre instruções de classes diferentes \\
-        \hline
+        \addlinespace
         Modo de usuário & Passa ao modo de usuário, executa 2 a 6 operações, em 30\% dos casos com um acesso ilegal a CSR, e retorna por chamada de sistema & Troca de modo de privilégio \\
-        \hline
-    \end{tabular}
+        \bottomrule
+    \end{tabularx}
 \end{table}
 
 A versão com \textit{traps} acrescenta ao programa um tratador. Ele registra a causa de cada \textit{trap} em uma região da assinatura, avança o endereço de retorno sobre a instrução que provocou a exceção e sempre retorna em modo de máquina, o que permite encerrar um trecho em modo de usuário com uma chamada de sistema. Em uma interrupção, o tratador registra apenas a causa e desabilita a interrupção de temporizador. O endereço de retorno não é registrado nesse caso, porque o RS5 e o Sail podem aceitar a mesma interrupção em instruções diferentes sem que isso constitua um erro.
@@ -54,27 +56,27 @@ A \cref{fig:exemplo-blocos} mostra três blocos gerados. Um programa tem em méd
 
 \begin{figure}[htb]
 \small
-\begin{verbatim}
+\begin{lstlisting}[style=vscodelight]
     # bloco de memória
-    sh    x9, 138(x31)
-    lbu   x16, 138(x31)     # load logo após store no mesmo endereço
-    lh    x1, 152(x31)
+    sh    x9, (*\asmnum{138}*)(x31)
+    lbu   x16, (*\asmnum{138}*)(x31)     # load logo após store no mesmo endereço
+    lh    x1, (*\asmnum{152}*)(x31)
     and   x18, x1, x21      # uso imediato do valor lido
     # bloco de laço
-    li    x2, 3
-Lb1:
+    li    x2, (*\asmnum{3}*)
+(*\asmlabel{Lb1:}*)
     divu  x27, x5, x11      # operação de múltiplos ciclos
     slt   x5, x27, x15      # uso imediato do resultado
-    sb    x5, 210(x31)
-    addi  x2, x2, -1
-    bnez  x2, Lb1           # desvio para trás
+    sb    x5, (*\asmnum{210}*)(x31)
+    addi  x2, x2, (*\asmnum{-1}*)
+    bnez  x2, (*\asmlabel{Lb1}*)           # desvio para trás
     # bloco de interrupção
-    li    x29, 0x80
+    li    x29, (*\asmnum{0x80}*)
     csrs  mie, x29          # habilita a interrupção de temporizador
-    csrsi mstatus, 8        # habilita as interrupções
-    andi  x15, x26, -329
-    csrci mstatus, 8        # desabilita as interrupções
-\end{verbatim}
+    csrsi mstatus, (*\asmnum{8}*)        # habilita as interrupções
+    andi  x15, x26, (*\asmnum{-329}*)
+    csrci mstatus, (*\asmnum{8}*)        # desabilita as interrupções
+\end{lstlisting}
     \caption{Três blocos produzidos pelo gerador. O registrador \texttt{x31} aponta para a região de memória do programa. Os comentários foram acrescentados.}
     \label{fig:exemplo-blocos}
 \end{figure}
@@ -87,7 +89,9 @@ Seis operadores de mutação atuam sobre a lista de blocos: substituição de um
 
 \subsection{Limitações e evolução prevista}\label{sec:previo-gerador-planos}
 
-O gerador atual tem quatro limitações, a maior parte delas evidenciada pelos experimentos da \cref{sec:previo-exp}. Cada uma define uma frente de trabalho.
+O gerador atual tem cinco limitações, a maior parte delas evidenciada pelos experimentos da \cref{sec:previo-exp}. Cada uma define uma frente de trabalho.
+
+\hl{aqui vai bem um itemize pra nao ficar desse jeito estranho}
 
 \begin{description}
     \item[Blocos sintéticos.] Os blocos atuais combinam instruções de uma mesma classe e não reproduzem os padrões de dependência e de acesso à memória de programas reais. Eles serão substituídos pelo corpus de blocos extraídos de aplicações (\cref{obj:2}), cuja composição exigirá renomear registradores e ajustar operandos (\cref{obj:3}).
@@ -102,18 +106,18 @@ O gerador atual tem quatro limitações, a maior parte delas evidenciada pelos e
 
 \section{Sinais candidatos a realimentação}\label{sec:previo-fontes}
 
-Um \textit{fuzzer} orientado por cobertura depende de um sinal que indique se um programa exercitou algo ainda não observado (\cref{sec:bg-fuzzing}). O Encarsia \citep{encarsia} mostrou que essa escolha não pode ser presumida: as métricas de dois \textit{fuzzers} conhecidos não alteraram o conjunto de falhas que eles encontraram. Por isso, cinco alternativas foram levantadas e instrumentadas, de modo que todas sejam registradas em cada execução e possam ser comparadas sobre os mesmos programas.
+Um \textit{fuzzer} orientado por cobertura depende de um sinal que indique se um programa exercitou algo ainda não observado (\cref{sec:bg-fuzzing}). O Encarsia \citep{Bolcskei:2025:Encarsia} mostrou que essa escolha não pode ser presumida: as métricas de dois \textit{fuzzers} conhecidos não alteraram o conjunto de falhas que eles encontraram. Por isso, cinco alternativas foram levantadas e instrumentadas, de modo que todas sejam registradas em cada execução e possam ser comparadas sobre os mesmos programas.
 
 \begin{description}
-    \item[Sem realimentação.] Cada programa é gerado do zero, e nenhuma informação da execução influencia o seguinte. Essa alternativa é a linha de base: como \textit{fuzzers} sem realimentação encontraram as mesmas falhas que suas versões guiadas \citep{encarsia}, um sinal só se justifica se superar a geração aleatória.
+    \item[Sem realimentação.] Cada programa é gerado do zero, e nenhuma informação da execução influencia o seguinte. Essa alternativa é a linha de base: como \textit{fuzzers} sem realimentação encontraram as mesmas falhas que suas versões guiadas \citep{Bolcskei:2025:Encarsia}, um sinal só se justifica se superar a geração aleatória.
 
     \item[Cobertura de código do SystemVerilog.] O Verilator registra quais linhas e ramos do RTL foram avaliados. É o sinal disponível sem esforço adicional na infraestrutura do RS5 e representa as métricas estruturais: mede o que está escrito no código, e não as situações em que o processador se encontrou.
 
-    \item[Estado do \textit{pipeline}.] A cada ciclo, uma sonda comprime em 40 bits os sinais de controle que descrevem os mecanismos da \cref{sec:bg-rs5}: o nível da fila de instruções, a validade e o redirecionamento da busca, a causa de cada bolha, a origem do encaminhamento de cada operando, a classe da instrução em execução e se ela é uma bolha, foi descartada ou havia sido predita, o estado do multiplicador e do divisor, os eventos de salto, de predição desfeita, de exceção, de retorno e de interrupção, o conteúdo dos estágios seguintes, o \textit{stall}, o modo de privilégio e a habilitação de interrupções. Endereços, valores e números de registradores ficam de fora, para que programas que diferem apenas nos operandos não sejam tratados como comportamentos distintos. A fonte é formada pelas arestas entre esses instantâneos, com sua duração (\cref{sec:bg-fuzzing}). Esse desenho só é viável porque o RS5 é um núcleo pequeno e em ordem: cada sinal de controle tem um significado conhecido, e o instantâneo pôde ser projetado manualmente a partir dele. Em núcleos maiores, como os avaliados pelo DifuzzRTL \citep{difuzzrtl}, os registradores observados são selecionados automaticamente por um critério estrutural, sem essa semântica. A fonte corresponde à realimentação funcional de componentes da microarquitetura que o Encarsia aponta como direção futura.
+    \item[Estado do \textit{pipeline}.] A cada ciclo, uma sonda comprime em 40 bits os sinais de controle que descrevem os mecanismos da \cref{sec:bg-rs5}: o nível da fila de instruções, a validade e o redirecionamento da busca, a causa de cada bolha, a origem do encaminhamento de cada operando, a classe da instrução em execução e se ela é uma bolha, foi descartada ou havia sido predita, o estado do multiplicador e do divisor, os eventos de salto, de predição desfeita, de exceção, de retorno e de interrupção, o conteúdo dos estágios seguintes, o \textit{stall}, o modo de privilégio e a habilitação de interrupções. Endereços, valores e números de registradores ficam de fora, para que programas que diferem apenas nos operandos não sejam tratados como comportamentos distintos. A fonte é formada pelas arestas entre esses instantâneos, com sua duração (\cref{sec:bg-fuzzing}). Esse desenho só é viável porque o RS5 é um núcleo pequeno e em ordem: cada sinal de controle tem um significado conhecido, e o instantâneo pôde ser projetado manualmente a partir dele. Em núcleos maiores, como os avaliados pelo DifuzzRTL \citep{Hur:2021:DifuzzRTL}, os registradores observados são selecionados automaticamente por um critério estrutural, sem essa semântica. A fonte corresponde à realimentação funcional de componentes da microarquitetura que o Encarsia aponta como direção futura.
 
-    \item[Transições de CSRs.] O ProcessorFuzz \citep{processorfuzz}, apresentado na \cref{sec:processorfuzz}, propõe orientar a exploração pelas transições dos valores dos CSRs, com o argumento de que eles representam o estado do processador melhor do que registradores de controle dominados pelo caminho de dados. O Encarsia chega à conclusão oposta sobre a utilidade dessa métrica: com ela ligada ou desligada, o ProcessorFuzz encontrou as mesmas falhas. Como as duas posições se contrapõem, a fonte foi incluída para ser medida no RS5. A cada exceção, interrupção aceita, retorno de \textit{trap}, leitura ou escrita de CSR, a sonda registra o estado de controle dos CSRs antes e depois do evento (modo de privilégio e campos de \texttt{mstatus}, \texttt{mie} e \texttt{mip}), o tipo do evento e a situação do \textit{pipeline} naquele ciclo.
+    \item[Transições de CSRs.] O ProcessorFuzz \citep{Canakci:2023:ProcessorFuzz} propõe orientar a exploração pelas transições dos valores dos CSRs, com o argumento de que eles representam o estado do processador melhor do que registradores de controle dominados pelo caminho de dados. O Encarsia chega à conclusão oposta sobre a utilidade dessa métrica: com ela ligada ou desligada, o ProcessorFuzz encontrou as mesmas falhas. Como as duas posições se contrapõem, a fonte foi incluída para ser medida no RS5. A cada exceção, interrupção aceita, retorno de \textit{trap}, leitura ou escrita de CSR, a sonda registra o estado de controle dos CSRs antes e depois do evento (modo de privilégio e campos de \texttt{mstatus}, \texttt{mie} e \texttt{mip}), o tipo do evento e a situação do \textit{pipeline} naquele ciclo.
 
-    \item[\textit{Bins}.] Sessenta e quatro condições nomeadas foram escritas manualmente, ao modo de pontos de cobertura funcional. Cada uma cruza sinais para descrever uma situação específica, como uma interrupção aceita durante uma divisão ou uma bolha congelada por uma operação de múltiplos ciclos. Os \textit{bins} não foram adotados para orientar a exploração por dois motivos. Primeiro, pontos de cobertura funcional precisam ser definidos pelo engenheiro de verificação a partir do que ele conhece do projeto \citep{rfuzz}. Cada \textit{bin} é uma hipótese de seu autor sobre onde estão as falhas: introduz no \textit{fuzzer} indicações da microarquitetura e o viés de quem as escreveu, o que a exploração automática procura evitar. Segundo, formam um conjunto pequeno e fechado, que se esgota rapidamente (\cref{sec:previo-sat}). Eles foram mantidos apenas como diagnóstico: um \textit{bin} nunca atingido aponta uma situação que o gerador não é capaz de produzir.
+    \item[\textit{Bins}.] Sessenta e quatro condições nomeadas foram escritas manualmente, ao modo de pontos de cobertura funcional. Cada uma cruza sinais para descrever uma situação específica, como uma interrupção aceita durante uma divisão ou uma bolha congelada por uma operação de múltiplos ciclos. Os \textit{bins} não foram adotados para orientar a exploração por dois motivos. Primeiro, pontos de cobertura funcional precisam ser definidos pelo engenheiro de verificação a partir do que ele conhece do projeto \citep{Laeufer:2018:RFUZZ}. Cada \textit{bin} é uma hipótese de seu autor sobre onde estão as falhas: introduz no \textit{fuzzer} indicações da microarquitetura e o viés de quem as escreveu, o que a exploração automática procura evitar. Segundo, formam um conjunto pequeno e fechado, que se esgota rapidamente (\cref{sec:previo-sat}). Eles foram mantidos apenas como diagnóstico: um \textit{bin} nunca atingido aponta uma situação que o gerador não é capaz de produzir.
 \end{description}
 
 \section{Implementação do \textit{fuzzer} sobre o RISCOF}\label{sec:previo-impl}
@@ -122,27 +126,28 @@ A primeira contribuição deste trabalho foi feita na própria integração do R
 
 A \cref{tab:riscof-tempo} mostra o efeito sobre a suíte de testes arquiteturais da configuração usada neste trabalho, composta por 62 testes. O tempo de CPU cai cerca de nove vezes. O ganho no tempo de relógio depende do número de núcleos, porque o fluxo anterior compilava os 62 modelos em paralelo: com 8 núcleos, a etapa do RS5 cai de cerca de 96 para 15 segundos, e com 56 núcleos, de 24 para 13 segundos. O restante do fluxo não é afetado: cerca de 35 segundos de preparação do RISCOF e 6 segundos de execução no Sail.
 
-\begin{table}[H]
+\begin{table}[htbp]
     \centering
     \caption{Execução da suíte de 62 testes arquiteturais antes e depois da alteração. A etapa do RS5 inclui a compilação do modelo e a montagem e a simulação dos testes. Medidas em um servidor compartilhado com dois processadores AMD EPYC 7453, com a execução restrita a 8 ou a 56 núcleos lógicos e sem reaproveitamento de compilações anteriores; duas execuções com 8 núcleos e três com 56.}
     \label{tab:riscof-tempo}
     \small
-    \begin{tabular}{|l|r|r|}
-        \hline
+    \setlength{\tabcolsep}{12pt}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{@{}lrr@{}}
+        \toprule
         \textbf{Medida} & \textbf{Antes} & \textbf{Depois} \\
-        \hline
+        \midrule
         Compilações do modelo & 62 & 1 \\
-        \hline
-        Tempo de CPU, 8 núcleos & 728 a 775 s & 80 s \\
-        \hline
-        Etapa do RS5, 8 núcleos & 93 a 99 s & 15 a 16 s \\
-        \hline
-        Fluxo completo, 8 núcleos & 135 a 137 s & 60 s \\
-        \hline
-        Etapa do RS5, 56 núcleos & 23 a 24 s & 12 a 15 s \\
-        \hline
-        Fluxo completo, 56 núcleos & 62 a 64 s & 51 a 56 s \\
-        \hline
+        \addlinespace
+        \multicolumn{3}{@{}l}{\textit{8 núcleos lógicos}} \\
+        \quad Tempo de CPU   & 728--775 s & 80 s \\
+        \quad Etapa do RS5   & 93--99 s   & 15--16 s \\
+        \quad Fluxo completo & 135--137 s & 60 s \\
+        \addlinespace
+        \multicolumn{3}{@{}l}{\textit{56 núcleos lógicos}} \\
+        \quad Etapa do RS5   & 23--24 s   & 12--15 s \\
+        \quad Fluxo completo & 62--64 s   & 51--56 s \\
+        \bottomrule
     \end{tabular}
 \end{table}
 
@@ -169,28 +174,29 @@ Os experimentos usaram o RS5 na configuração RV32IM com Zicsr e Zihpm, modos d
 
 A \cref{tab:saturacao} resume o comportamento de cada fonte sob geração aleatória com o gerador com \textit{traps}. As posições são os elementos distintos que a fonte registrou: pontos de cobertura, \textit{bins}, transições ou arestas.
 
-\begin{table}[H]
+\begin{table}[htbp]
     \centering
     \caption{Saturação das fontes em 200.000 programas aleatórios (três sementes). As colunas de 50\% e 90\% indicam quantos programas foram necessários para atingir essa fração do total observado.}
     \label{tab:saturacao}
     \small
-    \begin{tabular}{|l|r|r|r|r|}
-        \hline
-        \textbf{Fonte} & \textbf{Posições} & \textbf{50\%} & \textbf{90\%} & \textbf{Novas nos últimos 10.000} \\
-        \hline
-        Cobertura do Verilator$^{*}$ & 1.052 & 2 a 4 & 61 a 64 & 0 \\
-        \hline
-        \textit{Bins} & 49 de 64 & 2 a 3 & 34 a 73 & 0 \\
-        \hline
-        Transições de CSRs & 978 $\pm$ 3 & 2.100 a 2.600 & 56.000 a 57.000 & 2 a 6 \\
-        \hline
-        Arestas do \textit{pipeline} & 30.736 $\pm$ 40 & 9.400 a 9.600 & 107.000 a 108.000 & 238 a 253 \\
-        \hline
-        \multicolumn{5}{l}{\footnotesize $^{*}$ Medida em rodadas de 8.000 programas, por causa do custo da instrumentação.}
+    \setlength{\tabcolsep}{8pt}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{@{}lrrrr@{}}
+        \toprule
+        & & \multicolumn{2}{c}{\textbf{Programas até atingir}} & \textbf{Novas nos} \\
+        \cmidrule(lr){3-4}
+        \textbf{Fonte} & \textbf{Posições} & \textbf{50\%} & \textbf{90\%} & \textbf{últimos 10.000} \\
+        \midrule
+        Cobertura do Verilator$^{*}$ & 1.052 & 2--4 & 61--64 & 0 \\
+        \textit{Bins} & 49 de 64 & 2--3 & 34--73 & 0 \\
+        Transições de CSRs & 978 $\pm$ 3 & 2.100--2.600 & 56.000--57.000 & 2--6 \\
+        Arestas do \textit{pipeline} & 30.736 $\pm$ 40 & 9.400--9.600 & 107.000--108.000 & 238--253 \\
+        \bottomrule
+        \multicolumn{5}{@{}l}{\footnotesize $^{*}$ Medida em rodadas de 8.000 programas, por causa do custo da instrumentação.} \\
     \end{tabular}
 \end{table}
 
-A cobertura do Verilator e os \textit{bins} esgotam-se em centenas de programas. A partir desse ponto todo programa repete o que já foi visto, e a fonte deixa de distinguir um programa de outro. Os 15 \textit{bins} restantes permaneceram em zero nos 600.000 programas das três sementes. As transições de CSRs formam um espaço de cerca de mil posições, quase todo observado ao fim das rodadas. As arestas do \textit{pipeline} são a única fonte que continua a crescer: ao fim de 200.000 programas ainda surgem cerca de 250 arestas novas a cada 10.000. O estimador Chao1 \citep{chao1984}, aplicado ao número de arestas vistas em um e em dois programas, indica cerca de 35 mil arestas alcançáveis por esse gerador, das quais 87\% foram observadas. As três sementes diferem em menos de 0,3\% no total, o que mostra que esses números são propriedade do gerador, e não do acaso.
+A cobertura do Verilator e os \textit{bins} esgotam-se em centenas de programas. A partir desse ponto todo programa repete o que já foi visto, e a fonte deixa de distinguir um programa de outro. Os 15 \textit{bins} restantes permaneceram em zero nos 600.000 programas das três sementes. As transições de CSRs formam um espaço de cerca de mil posições, quase todo observado ao fim das rodadas. As arestas do \textit{pipeline} são a única fonte que continua a crescer: ao fim de 200.000 programas ainda surgem cerca de 250 arestas novas a cada 10.000. O estimador Chao1 \citep{Chao:1984:Chao1}, aplicado ao número de arestas vistas em um e em dois programas, indica cerca de 35 mil arestas alcançáveis por esse gerador, das quais 87\% foram observadas. As três sementes diferem em menos de 0,3\% no total, o que mostra que esses números são propriedade do gerador, e não do acaso.
 
 \subsection{Geração aleatória e geração guiada}\label{sec:previo-guiada}
 
@@ -226,23 +232,23 @@ Nenhum dos 80.000 programas sem \textit{traps} da segunda campanha divergiu do S
 
 A \cref{tab:bug} mostra quantos programas dispararam a divergência conforme a fonte que guiou a rodada.
 
-\begin{table}[H]
+\begin{table}[htbp]
     \centering
     \caption{Programas que dispararam a divergência em rodadas de 8.000 programas com o gerador com \textit{traps}.}
     \label{tab:bug}
     \small
-    \begin{tabular}{|l|r|r|}
-        \hline
-        \textbf{Realimentação} & \textbf{Programas que dispararam} & \textbf{Programa do décimo disparo} \\
-        \hline
-        Nenhuma (três sementes) & 25, 30 e 33 & 2.424 a 3.388 \\
-        \hline
+    \setlength{\tabcolsep}{10pt}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{@{}lrr@{}}
+        \toprule
+        & \textbf{Programas que} & \textbf{Programa do} \\
+        \textbf{Realimentação} & \textbf{dispararam} & \textbf{décimo disparo} \\
+        \midrule
+        Nenhuma (três sementes) & 25, 30 e 33 & 2.424--3.388 \\
         Arestas do \textit{pipeline} & 27 & 2.982 \\
-        \hline
         Transições de CSRs & 131 & 756 \\
-        \hline
         Mutação sem sinal & 14 & 5.517 \\
-        \hline
+        \bottomrule
     \end{tabular}
 \end{table}
 

@@ -59,6 +59,52 @@
 % este pacote é incompatível com a classe.
 %\usepackage{algorithm}
 \usepackage{enumitem}
+\usepackage{booktabs}  % tabelas com filetes horizontais
+\usepackage{tabularx}  % colunas de largura automática
+\usepackage{pdflscape} % páginas em paisagem
+\usepackage{afterpage}  % adia a tabela em paisagem para a próxima página
+\usepackage{pgfgantt}  % cronograma em formato de Gantt
+\definecolor{ganttBar}{HTML}{3A7BD5}
+
+% Listagens de código com as cores do tema Light Modern do VS Code
+\usepackage{listings}
+\definecolor{vscText}{HTML}{3B3B3B}
+\definecolor{vscKeyword}{HTML}{0000FF}
+\definecolor{vscVariable}{HTML}{001080}
+\definecolor{vscNumber}{HTML}{098658}
+\definecolor{vscComment}{HTML}{008000}
+\definecolor{vscLabel}{HTML}{795E26}
+\definecolor{vscFrame}{HTML}{E5E5E5}
+\definecolor{vscBack}{HTML}{F8F8F8}
+\newcommand{\asmnum}[1]{\textcolor{vscNumber}{#1}}
+\newcommand{\asmlabel}[1]{\textcolor{vscLabel}{#1}}
+\lstdefinelanguage{riscv}{
+    morekeywords={add,addi,sub,and,andi,or,ori,xor,xori,sll,slli,srl,srli,sra,srai,slt,slti,sltu,sltiu,lui,auipc,lb,lbu,lh,lhu,lw,sb,sh,sw,mul,mulh,mulhu,mulhsu,div,divu,rem,remu,beq,bne,blt,bge,bltu,bgeu,beqz,bnez,j,jal,jalr,jr,ret,li,la,mv,nop,ecall,ebreak,mret,csrr,csrw,csrs,csrc,csrrw,csrrs,csrrc,csrsi,csrci,csrwi},
+    morekeywords=[2]{x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,mie,mip,mstatus,mepc,mcause,mtvec,mscratch},
+    morecomment=[l]{\#},
+    sensitive=true,
+}
+\lstdefinestyle{vscodelight}{
+    language=riscv,
+    basicstyle=\ttfamily\small\color{vscText},
+    keywordstyle=\color{vscKeyword},
+    keywordstyle=[2]\color{vscVariable},
+    commentstyle=\color{vscComment},
+    backgroundcolor=\color{vscBack},
+    frame=single,
+    rulecolor=\color{vscFrame},
+    framesep=6pt,
+    xleftmargin=6pt,
+    xrightmargin=6pt,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    escapeinside={(*}{*)},
+    extendedchars=true,
+    literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+             {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c{c}}}1 {â}{{\^a}}1 {ê}{{\^e}}1
+             {ô}{{\^o}}1 {à}{{\`a}}1,
+}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Angelo: Pacotes para config de referencias
@@ -173,16 +219,16 @@
 % Abstract, com as palavras-chave passadas por parâmetro
 % (OBRIGATÓRIO, ao menos para teses e dissertações)
 %----------------------------------------------------------------
-% \begin{abstract}{lorem, ipsum, dolor, sit, amet}
-% Your abstract in English here. lorem ipsum dolor sit amet
-% consetetur sadipscing elitr sed diam nonumy eirmod tempor invidunt
-% ut labore et dolore magna aliquyam erat sed diam voluptua at vero
-% eos et accusam et justo duo dolores et ea rebum stet clita kasd
-% gubergren no sea takimata sanctus est lorem ipsum dolor sit amet
-% lorem ipsum dolor sit amet consetetur sadipscing elitr sed diam
-% nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-% erat sed diam voluptua at
-% \end{abstract}
+\begin{abstract}{lorem, ipsum, dolor, sit, amet}
+Your abstract in English here. lorem ipsum dolor sit amet
+consetetur sadipscing elitr sed diam nonumy eirmod tempor invidunt
+ut labore et dolore magna aliquyam erat sed diam voluptua at vero
+eos et accusam et justo duo dolores et ea rebum stet clita kasd
+gubergren no sea takimata sanctus est lorem ipsum dolor sit amet
+lorem ipsum dolor sit amet consetetur sadipscing elitr sed diam
+nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
+erat sed diam voluptua at
+\end{abstract}
 
 %----------------------------------------------------------------
 % Listas e sumário, nessa ordem. Somente o sumário é obrigatório,

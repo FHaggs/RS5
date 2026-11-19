@@ -21,15 +21,15 @@ Finalmente, a \cref{sec:compare} compara as abordagens com o trabalho proposto.
 
 \section{DifuzzRTL}\label{sec:difuzz}
 
-O DifuzzRTL \citep{difuzzrtl} é uma infraestrutura de \textit{fuzzing} diferencial que combina duas tarefas: conduzir implementações RTL a estados ainda não explorados e verificar se o comportamento observado está de acordo com a ISA. Suas entradas reúnem instruções, dados e interrupções. As instruções são geradas por mutação estruturada, com seleção aleatória de operações e operandos e reutilização de registradores e valores para favorecer dependências de dados.
+O DifuzzRTL \citep{Hur:2021:DifuzzRTL} é uma infraestrutura de \textit{fuzzing} diferencial que combina duas tarefas: conduzir implementações RTL a estados ainda não explorados e verificar se o comportamento observado está de acordo com a ISA. Suas entradas reúnem instruções, dados e interrupções. As instruções são geradas por mutação estruturada, com seleção aleatória de operações e operandos e reutilização de registradores e valores para favorecer dependências de dados.
 
-A exploração é orientada pela cobertura dos registradores que influenciam sinais de controle do circuito. Durante a simulação, os valores desses registradores são combinados e registrados a cada ciclo; entradas que produzem combinações inéditas são preservadas no corpus. A correção, por sua vez, é verificada após a execução pela comparação dos registradores e da memória do RTL com o estado produzido por um simulador da ISA. A abordagem encontrou 16 falhas até então desconhecidas.
+A exploração é orientada pela cobertura dos registradores que influenciam os sinais de controle do circuito. Durante a simulação, os valores desses registradores são combinados e registrados a cada ciclo; as entradas que geram combinações inéditas são preservadas no corpus. A correção, por sua vez, é verificada após a execução, por meio da comparação dos registradores e da memória do RTL com o estado gerado por um simulador da ISA. A abordagem identificou 16 falhas até então desconhecidas.
 
 Para este trabalho, o DifuzzRTL evidencia a separação entre o critério que orienta a exploração e o oráculo que verifica a correção. A cobertura pode determinar quais entradas devem ser priorizadas, mas a identificação de divergências permanece sob responsabilidade da execução diferencial. Como limitação, a adoção dessa métrica exigiria uma análise e uma instrumentação específicas do RTL, não previstas no fluxo atual de validação do RS5.
 
 \section{ProcessorFuzz}\label{sec:processorfuzz}
 
-O ProcessorFuzz \citep{processorfuzz} parte de uma crítica às métricas de cobertura extraídas do RTL, como a do DifuzzRTL. Segundo os autores, boa parte dos registradores de controle observados pertence ao caminho de dados, de modo que entradas sem comportamento novo são classificadas como interessantes, e a instrumentação necessária depende da linguagem de descrição de hardware. Em seu lugar, o trabalho propõe a cobertura de transições de CSRs, sob o argumento de que esses registradores resumem o estado do processador: o modo de privilégio, a habilitação e a causa de interrupções e exceções e a configuração de seu tratamento.
+O ProcessorFuzz \citep{Canakci:2023:ProcessorFuzz} parte de uma crítica às métricas de cobertura extraídas do RTL, como a do DifuzzRTL. Segundo os autores, boa parte dos registradores de controle observados pertence ao caminho de dados, de modo que entradas sem comportamento novo são classificadas como interessantes, e a instrumentação necessária depende da linguagem de descrição de hardware. Em seu lugar, o trabalho propõe a cobertura de transições de CSRs, sob o argumento de que esses registradores resumem o estado do processador: o modo de privilégio, a habilitação e a causa de interrupções e exceções e a configuração de seu tratamento.
 
 Uma transição é a mudança de valor de um conjunto selecionado de CSRs entre duas instruções consecutivas, registrada com o mnemônico da instrução que a provocou. São selecionados os CSRs que informam o estado do processador ou o configuram; ficam de fora os que mudam a cada instrução, como os contadores. As transições são obtidas em um simulador da ISA, e não no RTL: cada entrada é executada primeiro no simulador, e apenas as que produzem uma transição inédita entram no corpus e seguem para a simulação do RTL. As demais são descartadas. As entradas são geradas pelo mecanismo de mutação do DifuzzRTL, o que isola o efeito da métrica na comparação entre os dois. A correção é verificada pela comparação, instrução a instrução, dos traços de execução do RTL e do simulador. Em Rocket, BOOM e BlackParrot, o ProcessorFuzz disparou falhas conhecidas 1,23 vez mais rápido que o DifuzzRTL, em média, e revelou oito falhas novas nos processadores e uma no modelo de referência.
 
@@ -37,7 +37,7 @@ Para este trabalho, o ProcessorFuzz é a origem de uma das fontes de realimenta�
 
 \section{Cascade}\label{sec:cascade}
 
-O Cascade \citep{cascade} produz programas RISC-V longos, válidos e com fluxos de dados e de controle interdependentes. A abordagem procura evitar que desvios não controlados encerrem prematuramente a execução e reduzam a quantidade de instruções efetivamente destinadas ao teste. Em vez de modificar um corpus, o Cascade gera sequências de blocos básicos e favorece o uso de registradores produzidos recentemente, formando cadeias de dependência.
+O Cascade \citep{Solt:2024:Cascade} produz programas RISC-V longos, válidos e com fluxos de dados e de controle interdependentes. A abordagem procura evitar que desvios não controlados encerrem prematuramente a execução e reduzam a quantidade de instruções efetivamente destinadas ao teste. Em vez de modificar um corpus, o Cascade gera sequências de blocos básicos e favorece o uso de registradores produzidos recentemente, formando cadeias de dependência.
 
 O mecanismo central é uma pré-simulação da ISA que permite conhecer valores utilizados por saltos, acessos à memória e outras operações dependentes dos operandos. A partir dessas informações, o programa final é ajustado para preservar o fluxo esperado e, ao mesmo tempo, fazer com que decisões de controle dependam dos resultados anteriores. Uma divergência pode, assim, propagar-se até o fluxo de controle e impedir a terminação. O trabalho encontrou 37 novas falhas em processadores e uma falha no sintetizador Yosys.
 
@@ -45,7 +45,7 @@ O Cascade demonstra a importância de construir programas cujas instruções sej
 
 \section{Encarsia}\label{sec:encarsia}
 
-O Encarsia \citep{encarsia} não é um \textit{fuzzer}, mas uma infraestrutura para avaliá-los. Os autores observam que cada \textit{fuzzer} é demonstrado em processadores diferentes e otimiza uma métrica própria, e que o número de falhas novas encontradas é um critério frágil de comparação, pois as falhas se tornam mais raras à medida que os projetos amadurecem. A partir de um levantamento de 177 correções em quatro processadores RISC-V de código aberto (Ibex, CVA6, Rocket e BOOM), o trabalho constata que as falhas observáveis pelo software se reduzem a dois padrões: trocas de sinais em atribuições e expressões e erros em comandos condicionais.
+O Encarsia \citep{Bolcskei:2025:Encarsia} não é um \textit{fuzzer}, mas uma infraestrutura para avaliá-los. Os autores observam que cada \textit{fuzzer} é demonstrado em processadores diferentes e otimiza uma métrica própria, e que o número de falhas novas encontradas é um critério frágil de comparação, pois as falhas se tornam mais raras à medida que os projetos amadurecem. A partir de um levantamento de 177 correções em quatro processadores RISC-V de código aberto (Ibex, CVA6, Rocket e BOOM), o trabalho constata que as falhas observáveis pelo software se reduzem a dois padrões: trocas de sinais em atribuições e expressões e erros em comandos condicionais.
 
 Com base nessa observação, o Encarsia injeta falhas automaticamente na representação intermediária do Yosys, trocando conexões entre sinais ou removendo e alterando casos das árvores de multiplexadores que representam as atribuições condicionais. Um circuito que compara o projeto original ao modificado é submetido à verificação formal, de modo que apenas falhas com efeito observável nos registradores arquiteturais entram no corpus. Com 90 falhas assim obtidas em Ibex, Rocket e BOOM, os autores comparam DifuzzRTL, ProcessorFuzz e Cascade sob as mesmas condições. Nenhum dos três detectou mais de 42\% das falhas em 24 horas; DifuzzRTL e ProcessorFuzz encontraram exatamente o mesmo conjunto de falhas com e sem a orientação por cobertura; e os três detectaram conjuntos distintos de falhas, diferença que os autores atribuem aos programas gerados, e não ao mecanismo de realimentação.
 
@@ -54,7 +54,7 @@ Para este trabalho, o Encarsia é relevante em dois pontos. Primeiro, propõe qu
 
 \section{DiveFuzz}\label{sec:divefuzz}
 
-O DiveFuzz \citep{divefuzz} busca aumentar a diversidade dos estados arquiteturais exercitados durante o \textit{fuzzing}. O trabalho observa que programas distintos podem produzir repetidamente os mesmos valores e que a frequência das instruções efetivamente executadas pode permanecer desequilibrada, mesmo quando os códigos de operação são gerados com probabilidades semelhantes.
+O DiveFuzz \citep{Guo:2025:DiveFuzz} busca aumentar a diversidade dos estados arquiteturais exercitados durante o \textit{fuzzing}. O trabalho observa que programas distintos podem produzir repetidamente os mesmos valores e que a frequência das instruções efetivamente executadas pode permanecer desequilibrada, mesmo quando os códigos de operação são gerados com probabilidades semelhantes.
 
 Para reduzir essa repetição, os operandos são escolhidos durante a interação com um simulador da ISA, considerando o estado corrente dos registradores e da memória. O gerador favorece valores ainda pouco explorados e relações de dependência entre instruções, além de ajustar as probabilidades de geração para priorizar instruções raras. A correção é verificada pela comparação dos resultados produzidos pelo processador com o simulador. A abordagem aumentou a diversidade desses resultados e identificou 26 novas falhas.
 
@@ -62,7 +62,7 @@ O DiveFuzz mostra que a diversidade não deve ser medida apenas pelos códigos d
 
 \section{SimFuzz}\label{sec:simfuzz}
 
-O SimFuzz \citep{SIMFUZZ} explora o espaço de programas por meio de mutações em blocos orientadas por similaridade. A abordagem busca preservar a estrutura das sementes e reduzir a dependência de métricas de cobertura. Seu corpus inicial é composto por casos históricos que já revelaram falhas, sob a premissa de que esses programas representam regiões relevantes do espaço de entradas.
+O SimFuzz \citep{Lyu:2026:SimFuzz} explora o espaço de programas por meio de mutações em blocos orientadas por similaridade. A abordagem busca preservar a estrutura das sementes e reduzir a dependência de métricas de cobertura. Seu corpus inicial é composto por casos históricos que já revelaram falhas, sob a premissa de que esses programas representam regiões relevantes do espaço de entradas.
 
 Cada semente é dividida em blocos delimitados por transferências de controle. As instruções internas podem ser substituídas, mas as saídas dos blocos são preservadas para manter o fluxo original. As substituições são limitadas por uma medida de similaridade que considera formato, código de operação, unidade funcional e operandos. Os programas mutados são comparados com um simulador da ISA, enquanto a cobertura é utilizada somente na avaliação. O SimFuzz identificou 17 falhas, das quais 14 eram desconhecidas.
 
@@ -72,34 +72,38 @@ O SimFuzz relaciona-se diretamente com este trabalho por adotar mutações em n�
 
 A Tabela~\ref{tab:comparacao-relacionados} sintetiza as características dos seis trabalhos e as contrapõe à abordagem proposta. A estratégia de geração ou mutação indica como o espaço de programas é explorado, enquanto o critério de seleção ou feedback determina quais entradas são priorizadas a partir das informações disponíveis. O oráculo é apresentado separadamente, pois somente ele determina se o comportamento observado diverge da ISA.
 
-\begin{table}[H]
-    \centering
-    \caption{Comparação dos trabalhos relacionados.}
-    \label{tab:comparacao-relacionados}
-    \small
-    \setlength{\tabcolsep}{3pt}
-    \resizebox{\textwidth}{!}{%
-    \begin{tabular}{|p{1.8cm}|p{2.8cm}|p{3.2cm}|p{3.2cm}|p{3.2cm}|}
-        \hline
-        \textbf{Trabalho} & \textbf{Processadores} & \textbf{Estratégia de geração ou mutação} & \textbf{Critério de seleção ou feedback} & \textbf{Oráculo} \\
-        \hline
-        DifuzzRTL & Mor1kx e Rocket em ordem; BOOM superescalar fora de ordem & Geração e mutação individual de instruções e interrupções & Cobertura sensível a ciclos dos registradores de controle & Estado final do RTL comparado ao simulador da ISA \\
-        \hline
-        ProcessorFuzz & Rocket e BlackParrot em ordem; BOOM superescalar fora de ordem & Mutação individual de instruções, com o mecanismo do DifuzzRTL & Transições de CSRs obtidas em um simulador da ISA, antes da simulação do RTL & Traços de execução do RTL e do simulador da ISA comparados instrução a instrução \\
-        \hline
-        Cascade & PicoRV32, Kronos, VexRiscv, Rocket e CVA6 em ordem; BOOM superescalar fora de ordem & Geração de programas sintéticos longos em blocos básicos, com pré-simulação & Não utiliza feedback de execução; a pré-simulação orienta a construção & Não terminação causada pela propagação de divergências ao fluxo de controle \\
-        \hline
-        Encarsia & Ibex e Rocket em ordem; BOOM superescalar fora de ordem, com falhas injetadas & Não gera programas; injeta falhas no RTL (trocas de sinais e condicionais quebradas) para avaliar DifuzzRTL, ProcessorFuzz e Cascade & Avalia os critérios dos demais; a cobertura estrutural não alterou as falhas detectadas & Execução diferencial dos \textit{fuzzers} avaliados, com uma falha injetada por projeto \\
-        \hline
-        DiveFuzz & Rocket, CVA6 e NutShell em ordem; XiangShan superescalar fora de ordem & Construção dinâmica de instruções com operandos dependentes do contexto & Diversidade dos resultados e balanceamento dos códigos de operação & Comparação dos resultados com um simulador da ISA \\
-        \hline
-        SimFuzz & Rocket em ordem; BOOM e XiangShan superescalares fora de ordem & Mutação em blocos de casos históricos que revelaram falhas & Similaridade entre instruções; cobertura utilizada apenas na avaliação & Comparação diferencial com simuladores da ISA \\
-        \hline
-        Este trabalho & RS5 com pipeline em ordem, sob diferentes configurações & Combinação e mutação estruturada de blocos extraídos de aplicações reais & Diversidade estrutural e cobertura do RTL como critério complementar & Assinaturas do RS5 e do Sail comparadas pelo RISCOF \\
-        \hline
-    \end{tabular}
-    }
-\end{table}
+\afterpage{%
+\begin{landscape}
+    \begin{table}[p]
+        \centering
+        \caption{Comparação dos trabalhos relacionados.}
+        \label{tab:comparacao-relacionados}
+        \small
+        \renewcommand{\arraystretch}{1.35}
+        \setlength{\tabcolsep}{6pt}
+        \begin{tabularx}{\linewidth}{@{}>{\bfseries\raggedright\arraybackslash}p{2.7cm}*{4}{>{\raggedright\arraybackslash}X}@{}}
+            \toprule
+            Trabalho & \textbf{Processadores} & \textbf{Estratégia de geração ou mutação} & \textbf{Critério de seleção ou feedback} & \textbf{Oráculo} \\
+            \midrule
+            DifuzzRTL & Mor1kx e Rocket em ordem; BOOM superescalar fora de ordem & Geração e mutação individual de instruções e interrupções & Cobertura sensível a ciclos dos registradores de controle & Estado final do RTL comparado ao simulador da ISA \\
+            \addlinespace
+            ProcessorFuzz & Rocket e BlackParrot em ordem; BOOM superescalar fora de ordem & Mutação individual de instruções, com o mecanismo do DifuzzRTL & Transições de CSRs obtidas em um simulador da ISA, antes da simulação do RTL & Traços de execução do RTL e do simulador da ISA comparados instrução a instrução \\
+            \addlinespace
+            Cascade & PicoRV32, Kronos, VexRiscv, Rocket e CVA6 em ordem; BOOM superescalar fora de ordem & Geração de programas sintéticos longos em blocos básicos, com pré-simulação & Não utiliza feedback de execução; a pré-simulação orienta a construção & Não terminação causada pela propagação de divergências ao fluxo de controle \\
+            \addlinespace
+            Encarsia & Ibex e Rocket em ordem; BOOM superescalar fora de ordem, com falhas injetadas & Não gera programas; injeta falhas no RTL (trocas de sinais e condicionais quebradas) para avaliar DifuzzRTL, ProcessorFuzz e Cascade & Avalia os critérios dos demais; a cobertura estrutural não alterou as falhas detectadas & Execução diferencial dos \textit{fuzzers} avaliados, com uma falha injetada por projeto \\
+            \addlinespace
+            DiveFuzz & Rocket, CVA6 e NutShell em ordem; XiangShan superescalar fora de ordem & Construção dinâmica de instruções com operandos dependentes do contexto & Diversidade dos resultados e balanceamento dos códigos de operação & Comparação dos resultados com um simulador da ISA \\
+            \addlinespace
+            SimFuzz & Rocket em ordem; BOOM e XiangShan superescalares fora de ordem & Mutação em blocos de casos históricos que revelaram falhas & Similaridade entre instruções; cobertura utilizada apenas na avaliação & Comparação diferencial com simuladores da ISA \\
+            \midrule
+            \rowcolor{gray!12}
+            Este trabalho & RS5 com pipeline em ordem, sob diferentes configurações & Combinação e mutação estruturada de blocos extraídos de aplicações reais & Diversidade estrutural e cobertura do RTL como critério complementar & Assinaturas do RS5 e do Sail comparadas pelo RISCOF \\
+            \bottomrule
+        \end{tabularx}
+    \end{table}
+\end{landscape}
+}
 
 A comparação evidencia duas estratégias predominantes. DifuzzRTL, ProcessorFuzz e DiveFuzz geram instruções em granularidade fina e utilizam informações da execução para direcionar novas entradas. Cascade e SimFuzz preservam uma estrutura maior dos programas, mas partem, respectivamente, de sequências sintéticas e de casos históricos de falhas. O Encarsia ocupa um papel distinto: não gera entradas, mas fornece o meio de comparar as demais abordagens e questiona o valor dos critérios estruturais que as orientam. As abordagens também distinguem os critérios que orientam a exploração dos mecanismos empregados para verificar a correção: cobertura, diversidade ou similaridade orientam a construção ou a escolha das entradas, enquanto a execução diferencial ou a não terminação identifica possíveis falhas.
 

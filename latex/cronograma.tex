@@ -20,35 +20,40 @@ Os \cref{obj:2,obj:7} não foram iniciados: os blocos atuais são sintéticos, e
 
 \section{Atividades}\label{sec:crono-atividades}
 
-A \cref{tab:cronograma} distribui as atividades ao longo do semestre. A lista que a segue descreve cada atividade, os objetivos que ela cumpre e o resultado esperado.
+A \cref{fig:cronograma} distribui as atividades ao longo do semestre. A lista que a segue descreve cada atividade, os objetivos que ela cumpre e o resultado esperado.
 
-\begin{table}[H]
+\begin{figure}[htbp]
     \centering
+    \begin{ganttchart}[
+        x unit=1.05cm,
+        y unit title=0.65cm,
+        y unit chart=0.62cm,
+        vgrid={*1{black!15, dashed}},
+        hgrid={*1{black!8}},
+        title/.style={draw=none, fill=none},
+        title label font=\small\bfseries,
+        title height=1,
+        bar/.style={draw=none, fill=ganttBar, rounded corners=1.5pt},
+        bar height=0.55,
+        bar top shift=0.225,
+        bar label font=\small,
+        bar label node/.append style={align=left, text width=8.2cm, xshift=-6pt},
+        canvas/.style={draw=black!25},
+    ]{1}{6}
+        \gantttitle{Jan}{1} \gantttitle{Fev}{1} \gantttitle{Mar}{1}
+        \gantttitle{Abr}{1} \gantttitle{Mai}{1} \gantttitle{Jun}{1} \\
+        \ganttbar{\ref{atv:corpus}\quad Corpus de blocos de aplicações reais}{1}{2} \\
+        \ganttbar{\ref{atv:mutacao}\quad Mutação e composição dos blocos}{2}{3} \\
+        \ganttbar{\ref{atv:criterio}\quad Critério de mutação}{3}{4} \\
+        \ganttbar{\ref{atv:config}\quad Automação das configurações}{3}{3} \\
+        \ganttbar{\ref{atv:falhas}\quad Falhas injetadas para a avaliação}{4}{4} \\
+        \ganttbar{\ref{atv:campanhas}\quad Campanhas em diferentes configurações}{4}{5} \\
+        \ganttbar{\ref{atv:avaliacao}\quad Avaliação da abordagem}{5}{6} \\
+        \ganttbar{\ref{atv:redacao}\quad Redação do volume final}{5}{6}
+    \end{ganttchart}
     \caption{Cronograma das atividades para o primeiro semestre de 2027.}
-    \label{tab:cronograma}
-    \small
-    \begin{tabular}{|l|l|c|c|c|c|c|c|}
-        \hline
-        \multicolumn{2}{|l|}{\textbf{Atividade}} & \textbf{Jan} & \textbf{Fev} & \textbf{Mar} & \textbf{Abr} & \textbf{Mai} & \textbf{Jun} \\
-        \hline
-        \ref{atv:corpus} & Corpus de blocos de aplicações reais & X & X &   &   &   &   \\
-        \hline
-        \ref{atv:mutacao} & Mutação e composição dos blocos &   & X & X &   &   &   \\
-        \hline
-        \ref{atv:criterio} & Critério de mutação &   &   & X & X &   &   \\
-        \hline
-        \ref{atv:config} & Automação das configurações &   &   & X &   &   &   \\
-        \hline
-        \ref{atv:falhas} & Falhas injetadas para a avaliação &   &   &   & X &   &   \\
-        \hline
-        \ref{atv:campanhas} & Campanhas em diferentes configurações &   &   &   & X & X &   \\
-        \hline
-        \ref{atv:avaliacao} & Avaliação da abordagem &   &   &   &   & X & X \\
-        \hline
-        \ref{atv:redacao} & Redação do volume final &   &   &   &   & X & X \\
-        \hline
-    \end{tabular}
-\end{table}
+    \label{fig:cronograma}
+\end{figure}
 
 \begin{atividades}
     \item \label{atv:corpus} \textbf{Corpus de blocos de aplicações reais.} Selecionar aplicações que contenham os padrões computacionais citados na introdução, como reduções, transformações de elementos, produtos escalares e operações matriciais, compilá-las para a ISA do RS5 e extrair blocos delimitados por transferências de controle, com a anotação dos registradores e das regiões de memória que cada bloco usa. Cumpre o \cref{obj:2}. Resultado esperado: um corpus de blocos integrado ao gerador, em substituição aos blocos sintéticos.
