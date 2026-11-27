@@ -204,30 +204,16 @@
 % Resumo, com as palavras-chave passadas por parâmetro
 % (OBRIGATÓRIO, ao menos para teses e dissertações)
 %----------------------------------------------------------------
-\begin{resumo}{lorem, ipsum, dolor, sit, amet}
-Seu resumo em português aqui. lorem ipsum dolor sit amet
-consetetur sadipscing elitr sed diam nonumy eirmod tempor invidunt
-ut labore et dolore magna aliquyam erat sed diam voluptua at vero
-eos et accusam et justo duo dolores et ea rebum stet clita.  kasd
-gubergren no sea takimata sanctus est lorem ipsum dolor sit amet
-lorem ipsum dolor sit amet consetetur sadipscing elitr sed diam
-nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-erat sed diam voluptua at.
+\begin{resumo}{verificação funcional, \textit{fuzzing}, RISC-V, RS5, RISCOF}
+A verificação funcional de processadores depende de programas de teste capazes de exercitar as interações entre as instruções e os mecanismos internos da microarquitetura. O RS5, um processador RISC-V de 32 bits parametrizável, é validado pela suíte \textit{riscv-tests} e pelos testes arquiteturais do RISCOF, ambos limitados a cenários escritos manualmente. Este trabalho propõe um \textit{fuzzer} para o RS5 construído sobre o RISCOF. Ele gera programas pela combinação e mutação de blocos de Assembly extraídos de aplicações reais, executa-os em diferentes configurações do processador e compara as assinaturas produzidas pelo RS5, simulado com o Verilator, com as do modelo de referência Sail. A exploração é orientada por realimentação extraída do estado interno do processador. Como trabalho prévio, foram construídos um gerador preliminar e a infraestrutura de \textit{fuzzing}, usados para comparar fontes de realimentação em cerca de 1,8 milhão de programas. As arestas entre estados do \textit{pipeline} não saturaram em 200.000 programas, enquanto a cobertura de código do Verilator se esgotou em algumas centenas. Com o gerador preliminar, a exploração guiada não superou a geração aleatória, o que direciona as próximas etapas para o corpus de blocos e para os operadores de mutação. O estudo também revelou uma divergência entre o RS5 e o Sail no tratamento de interrupções. Por fim, é apresentado o cronograma das atividades restantes.
 \end{resumo}
 
 %----------------------------------------------------------------
 % Abstract, com as palavras-chave passadas por parâmetro
 % (OBRIGATÓRIO, ao menos para teses e dissertações)
 %----------------------------------------------------------------
-\begin{abstract}{lorem, ipsum, dolor, sit, amet}
-Your abstract in English here. lorem ipsum dolor sit amet
-consetetur sadipscing elitr sed diam nonumy eirmod tempor invidunt
-ut labore et dolore magna aliquyam erat sed diam voluptua at vero
-eos et accusam et justo duo dolores et ea rebum stet clita kasd
-gubergren no sea takimata sanctus est lorem ipsum dolor sit amet
-lorem ipsum dolor sit amet consetetur sadipscing elitr sed diam
-nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-erat sed diam voluptua at
+\begin{abstract}{functional verification, fuzzing, RISC-V, RS5, RISCOF}
+Functional verification of processors depends on test programs that exercise the interactions between instructions and the internal mechanisms of the microarchitecture. RS5, a configurable 32-bit RISC-V processor, is validated with the riscv-tests suite and the RISCOF architectural tests, both limited to manually written scenarios. This work proposes a fuzzer for RS5 built on top of RISCOF. It generates programs by combining and mutating Assembly blocks extracted from real applications, runs them on different configurations of the processor, and compares the signatures produced by RS5, simulated with Verilator, against those of the Sail reference model. Exploration is guided by feedback extracted from the internal state of the processor. As preliminary work, a first generator and the fuzzing infrastructure were built and used to compare feedback sources over about 1.8 million programs. The edges between pipeline states did not saturate within 200,000 programs, whereas Verilator code coverage was exhausted after a few hundred. With the preliminary generator, guided exploration did not outperform random generation, which directs the next steps toward the block corpus and the mutation operators. The study also revealed a divergence between RS5 and Sail in interrupt handling. Finally, the schedule of the remaining activities is presented.
 \end{abstract}
 
 %----------------------------------------------------------------
