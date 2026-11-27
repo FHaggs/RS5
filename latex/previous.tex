@@ -89,21 +89,26 @@ Seis operadores de mutação atuam sobre a lista de blocos: substituição de um
 
 \subsection{Limitações e evolução prevista}\label{sec:previo-gerador-planos}
 
-O gerador atual tem quatro limitações, a maior parte delas evidenciada pelos experimentos da \cref{sec:previo-exp}. Cada uma define uma frente de trabalho.
+O gerador atual tem cinco limitações, a maior parte delas evidenciada pelos experimentos da \cref{sec:previo-exp}. Cada uma define uma frente de trabalho:
 
-\begin{itemize}
-    \item \textbf{Blocos sintéticos.} Os blocos atuais combinam instruções de uma mesma classe e não reproduzem os padrões de dependência e de acesso à memória de programas reais. Eles serão substituídos pelo corpus de blocos extraídos de aplicações (\cref{obj:2}), cuja composição exigirá renomear registradores e ajustar operandos (\cref{obj:3}).
+\hl{aqui vai bem um itemize pra nao ficar desse jeito estranho}
 
-    \item \textbf{Mutação pouco granular.} Cada operador preserva um bloco por inteiro ou o sorteia de novo, e por isso um programa mutado repete quase todos os estados de seu pai. Nas rodadas guiadas, um programa mutado trouxe de 0,2 a 1,2 aresta nova do \textit{pipeline}, contra 3,8 de um programa gerado do zero, e o operador que mantém todas as instruções e sorteia apenas os valores iniciais foi o que menos rendeu. Serão acrescentados operadores que atuam dentro do bloco, com substituição de registradores, alteração de operandos, reordenação de instruções e modificação das dependências, preservada a estrutura de controle, e operadores que alteram mais de um bloco por vez (\cref{obj:3}).
+\begin{enumerate}
+    \item \textbf{Blocos sintéticos:} Os blocos atuais combinam instruções de uma mesma classe e não reproduzem os padrões de dependência e de acesso à memória de programas reais. Eles serão substituídos pelo corpus de blocos extraídos de aplicações (\cref{obj:2}), cuja composição exigirá renomear registradores e ajustar operandos (\cref{obj:3}).
 
-    \item \textbf{Proporção fixa de mutações.} A fração de 80\% foi fixada de antemão e custa estados enquanto gerar do zero rende mais do que mutar. Essa proporção passará a acompanhar o rendimento medido de cada origem, como parte do critério que decide quais combinações de blocos e mutações priorizar (\cref{obj:4}).
+    \item[Mutação pouco granular.] Cada operador preserva um bloco por inteiro ou o sorteia de novo, e por isso um programa mutado repete quase todos os estados de seu pai. Nas rodadas guiadas, um programa mutado trouxe de 0,2 a 1,2 aresta nova do \textit{pipeline}, contra 3,8 de um programa gerado do zero, e o operador que mantém todas as instruções e sorteia apenas os valores iniciais foi o que menos rendeu. Serão acrescentados operadores que atuam dentro do bloco, com substituição de registradores, alteração de operandos, reordenação de instruções e modificação das dependências, preservada a estrutura de controle, e operadores que alteram mais de um bloco por vez (\cref{obj:3}).
 
-    \item \textbf{Situações fora do alcance.} Os \textit{bins} que permaneceram em zero apontam composições que o gerador não produz: uma interrupção aceita sobre um desvio, um salto ou uma instrução de sistema; uma exceção logo após uma operação de múltiplos ciclos; um \textit{load} cujo resultado é o endereço do acesso ou do salto seguinte; e um retorno de \textit{trap} executado em modo de usuário. Nenhuma quantidade de programas as alcança. Elas exigem novas composições, como permitir que a janela de interrupção envolva qualquer tipo de bloco.
-\end{itemize}
+    \item[Proporção fixa de mutações.] A fração de 80\% foi fixada de antemão e custa estados enquanto gerar do zero rende mais do que mutar. Essa proporção passará a acompanhar o rendimento medido de cada origem, como parte do critério que decide quais combinações de blocos e mutações priorizar (\cref{obj:4}).
+
+    \item[Situações fora do alcance.] Os \textit{bins} que permaneceram em zero apontam composições que o gerador não produz: uma interrupção aceita sobre um desvio, um salto ou uma instrução de sistema; uma exceção logo após uma operação de múltiplos ciclos; um \textit{load} cujo resultado é o endereço do acesso ou do salto seguinte; e um retorno de \textit{trap} executado em modo de usuário. Nenhuma quantidade de programas as alcança. Elas exigem novas composições, como permitir que a janela de interrupção envolva qualquer tipo de bloco.
+
+\end{enumerate}
 
 \section{Sinais candidatos a realimentação}\label{sec:previo-fontes}
 
 Um \textit{fuzzer} orientado por cobertura depende de um sinal que indique se um programa exercitou algo ainda não observado (\cref{sec:bg-fuzzing}). O Encarsia \citep{Bolcskei:2025:Encarsia} mostrou que essa escolha não pode ser presumida: as métricas de dois \textit{fuzzers} conhecidos não alteraram o conjunto de falhas que eles encontraram. Por isso, cinco alternativas foram levantadas e instrumentadas, de modo que todas sejam registradas em cada execução e possam ser comparadas sobre os mesmos programas.
+
+\hl{Itemize/enumerate}
 
 \begin{description}
     \item[Sem realimentação.] Cada programa é gerado do zero, e nenhuma informação da execução influencia o seguinte. Essa alternativa é a linha de base: como \textit{fuzzers} sem realimentação encontraram as mesmas falhas que suas versões guiadas \citep{Bolcskei:2025:Encarsia}, um sinal só se justifica se superar a geração aleatória.
