@@ -48,7 +48,7 @@ O DiveFuzz \citep{Guo:2025:DiveFuzz} busca aumentar a diversidade dos estados ar
 
 Para reduzir essa repetição, os operandos são escolhidos durante a interação com um simulador da ISA, considerando o estado corrente dos registradores e da memória. O gerador favorece valores ainda pouco explorados e relações de dependência entre instruções, além de ajustar as probabilidades de geração para priorizar instruções raras. A correção é verificada pela comparação dos resultados produzidos pelo processador com o simulador. A abordagem aumentou a diversidade desses resultados e identificou 26 novas falhas.
 
-O DiveFuzz mostra que a diversidade não deve ser medida apenas pelos códigos de operação, mas também pelos operandos, resultados e relações de dependência. Essa observação é relevante para o RS5, no qual diferentes relações entre instruções podem exercitar mecanismos distintos do pipeline. Contudo, a estratégia de comparação do DiveFuzz exigiria uma interface de co-simulação que não faz parte do fluxo atual do RISCOF; neste trabalho, o oráculo continuará baseado em assinaturas ao final da execução.
+O DiveFuzz mostra que a diversidade não deve ser medida apenas pelos códigos de operação, mas também pelos operandos, resultados e relações de dependência. Essa observação é relevante para o RS5, no qual diferentes relações entre instruções podem exercitar mecanismos distintos do \textit{pipeline}. Contudo, a estratégia de comparação do DiveFuzz exigiria uma interface de co-simulação que não faz parte do fluxo atual do RISCOF; neste trabalho, o oráculo continuará baseado em assinaturas ao final da execução.
 
 \subsection{SimFuzz}\label{sec:simfuzz}
 
@@ -71,7 +71,7 @@ Com base nessa observação, o Encarsia injeta falhas automaticamente na represe
 Para este trabalho, o Encarsia é relevante em dois pontos. Primeiro, propõe que a medida adequada de um \textit{fuzzer} é a detecção de falhas conhecidas, e não a cobertura alcançada. Segundo, mostra que métricas estruturais, como os registradores de controle do DifuzzRTL e as transições de CSR do ProcessorFuzz, não alteraram as falhas encontradas, e aponta como direção futura a realimentação funcional a partir de componentes da microarquitetura. Essas conclusões orientaram a escolha das fontes de sinal consideradas para o \textit{fuzzer} do RS5, discutida no \cref{chap:previo}.
 \section{\label{sec:compare}Comparação com os trabalhos relacionados}
 
-A Tabela~\ref{tab:comparacao-relacionados} sintetiza as características dos seis trabalhos e as contrapõe à abordagem proposta. A estratégia de geração ou mutação indica como o espaço de programas é explorado, enquanto o critério de seleção ou feedback determina quais entradas são priorizadas a partir das informações disponíveis. O oráculo é apresentado separadamente, pois somente ele determina se o comportamento observado diverge da ISA.
+A \cref{tab:comparacao-relacionados} sintetiza as características dos seis trabalhos e as contrapõe à abordagem proposta. A estratégia de geração ou mutação indica como o espaço de programas é explorado, enquanto o critério de seleção ou feedback determina quais entradas são priorizadas a partir das informações disponíveis. O oráculo é apresentado separadamente, pois somente ele determina se o comportamento observado diverge da ISA.
 
 \afterpage{%
 \begin{landscape}
@@ -99,7 +99,7 @@ A Tabela~\ref{tab:comparacao-relacionados} sintetiza as características dos sei
             SimFuzz & Rocket em ordem; BOOM e XiangShan superescalares fora de ordem & Mutação em blocos de casos históricos que revelaram falhas & Similaridade entre instruções; cobertura utilizada apenas na avaliação & Comparação diferencial com simuladores da ISA \\
             \midrule
             \rowcolor{gray!12}
-            Este trabalho & RS5 com pipeline em ordem, sob diferentes configurações & Combinação e mutação estruturada de blocos extraídos de aplicações reais & Diversidade estrutural e cobertura do RTL como critério complementar & Assinaturas do RS5 e do Sail comparadas pelo RISCOF \\
+            Este trabalho & RS5 com \textit{pipeline} em ordem, sob diferentes configurações & Combinação e mutação estruturada de blocos extraídos de aplicações reais & Diversidade estrutural e cobertura do RTL como critério complementar & Assinaturas do RS5 e do Sail comparadas pelo RISCOF \\
             \bottomrule
         \end{tabularx}
     \end{table}

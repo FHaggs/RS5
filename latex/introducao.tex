@@ -50,7 +50,7 @@
 % Começar com um contexto + problema: implementação e verificação de processadores. Validação da corretude da implementação de um conjunto de instruções em uma microarquitetura.
 
 O desenvolvimento de processadores envolve a implementação de microarquiteturas capazes de executar a especificação definida por uma arquitetura de conjunto de instruções (ISA). 
-Nessas implementações, diferentes componentes, como unidades funcionais, bancos de registradores, mecanismos de controle, interfaces de memória e estágios do pipeline, devem cooperar para preservar a semântica definida pela ISA. 
+Nessas implementações, diferentes componentes, como unidades funcionais, bancos de registradores, mecanismos de controle, interfaces de memória e estágios do \textit{pipeline}, devem cooperar para preservar a semântica definida pela ISA. 
 Essa correção deve ser mantida mesmo diante de dependências de dados, desvios, exceções, interrupções e operações com múltiplos ciclos \citep{Hennessy:2025:CA}.
 
 Nesse contexto, a verificação constitui uma etapa fundamental do projeto, pois uma instrução corretamente implementada em um cenário isolado pode apresentar comportamento incorreto quando combinada com outras instruções ou executada sob diferentes condições da microarquitetura.
@@ -71,7 +71,7 @@ Dessa forma, a validação deve considerar tanto as instruções implementadas q
 
 % O processador RS5  constitui um ambiente adequado para o estudo desse problema. 
 O RS5 \citep{Nunes:2024:RS5} é um processador RISC-V de 32 bits desenvolvido em SystemVerilog para sistemas embarcados. 
-Sua microarquitetura possui um pipeline de quatro estágios e inclui módulos responsáveis pela busca, decodificação, execução, acesso à memória e escrita dos resultados no banco de registradores. 
+Sua microarquitetura possui um \textit{pipeline} de quatro estágios e inclui módulos responsáveis pela busca, decodificação, execução, acesso à memória e escrita dos resultados no banco de registradores. 
 O projeto também oferece suporte aos modos de privilégio de máquina e de usuário, além de mecanismos para exceções, interrupções e acesso aos registradores de controle e de estado.
 
 Uma característica relevante do RS5 é sua capacidade de parametrização. 
@@ -87,7 +87,7 @@ No RS5, esses testes são compilados e ligados em um único programa, que execut
 Esses testes são úteis para identificar erros básicos na implementação de instruções e verificar casos conhecidos. 
 Entretanto, sua capacidade de exploração é limitada pelas sequências definidas pelos seus autores. 
 As combinações entre instruções, registradores, dependências, acessos à memória e eventos de controle permanecem restritas aos cenários explicitamente codificados. 
-Como consequência, comportamentos que dependem de interações pouco usuais entre instruções ou de estados específicos do pipeline podem não ser acionados.
+Como consequência, comportamentos que dependem de interações pouco usuais entre instruções ou de estados específicos do \textit{pipeline} podem não ser acionados.
 
 O RISCOF oferece uma validação arquitetural sistemática. 
 O framework seleciona testes compatíveis com a configuração da arquitetura, executa esses testes no dispositivo sob teste e em um modelo de referência, e compara os resultados produzidos com base na região de memória onde são escritos, chamada de assinatura. 
@@ -99,7 +99,6 @@ O RS5 também permite variar os parâmetros da implementação.
 Entre os parâmetros disponíveis estão a habilitação do encaminhamento de operandos, a predição de desvios, o tamanho da fila de instruções, o uso de memória com uma ou duas portas e o número de ciclos de atraso nas respostas da memória. 
 % As extensões habilitadas são definidas pela descrição da arquitetura utilizada pelo RISCOF e convertidas em parâmetros para a compilação do modelo no Verilator. 
 % Essa estrutura fornece os componentes necessários para executar automaticamente um programa tanto no RS5 quanto no modelo Sail, em diferentes configurações.
-% TODO: Referencias do riscof e riscvTests
 Apesar de sua maior abrangência, a validação realizada pelo RISCOF continua dependente de testes arquiteturais previamente escritos. 
 Esses testes são projetados principalmente para demonstrar que determinadas funcionalidades estão presentes e produzem resultados compatíveis com a especificação. 
 Eles não exploram necessariamente todas as interações entre instruções nem todas as condições internas geradas por diferentes configurações do pipeline. 
@@ -148,7 +147,8 @@ A combinação de blocos provenientes de código real, mutações estruturadas, 
 
 A organização do restante do documento é feita da seguinte forma:
 \begin{itemize}
-    \item o \cref{chap:related} apresenta a fundamentação teórica e os trabalhos relacionados;
+    \item o \cref{chap:bg} apresenta a fundamentação teórica;
+    \item o \cref{chap:related} apresenta os trabalhos relacionados;
     \item o \cref{chap:previo} apresenta o trabalho prévio;
     \item o \cref{chap:cronograma} apresenta o cronograma para o cumprimento dos objetivos deste projeto.
 \end{itemize}
