@@ -77,6 +77,7 @@ O projeto também oferece suporte aos modos de privilégio de máquina e de usu�
 Uma característica relevante do RS5 é sua capacidade de parametrização. 
 A arquitetura base RV32I pode ser combinada com extensões como M, A, C, Zicond, Zihpm, Zbkb, Zkne, Zknh, Zve32x, bem como com extensões não padronizadas desenvolvidas para aplicações específicas. 
 A implementação também permite configurar características da microarquitetura, incluindo o encaminhamento de operandos, a predição estática de desvios, o tamanho da fila de instruções e parâmetros relacionados à unidade vetorial. 
+O ambiente de simulação permite ainda variar a organização da memória, com uma ou duas portas, e o número de ciclos de atraso em suas respostas. 
 Essa flexibilidade permite empregar o mesmo código RTL na avaliação de diferentes organizações do processador, mas também aumenta o número de configurações a serem verificadas.
 
 % O repositório do RS5 disponibiliza aplicações, programas de teste, infraestrutura de simulação e suporte à prototipação. 
@@ -95,8 +96,6 @@ Na infraestrutura do RS5, o dispositivo sob teste é compilado e simulado com o 
 Cada teste é compilado separadamente e executado em ambos os modelos. 
 Uma divergência nas assinaturas indica uma possível discrepância entre o comportamento do processador e a semântica definida pela arquitetura.
 
-O RS5 também permite variar os parâmetros da implementação. 
-Entre os parâmetros disponíveis estão a habilitação do encaminhamento de operandos, a predição de desvios, o tamanho da fila de instruções, o uso de memória com uma ou duas portas e o número de ciclos de atraso nas respostas da memória. 
 % As extensões habilitadas são definidas pela descrição da arquitetura utilizada pelo RISCOF e convertidas em parâmetros para a compilação do modelo no Verilator. 
 % Essa estrutura fornece os componentes necessários para executar automaticamente um programa tanto no RS5 quanto no modelo Sail, em diferentes configurações.
 Apesar de sua maior abrangência, a validação realizada pelo RISCOF continua dependente de testes arquiteturais previamente escritos. 
@@ -108,17 +107,14 @@ Uma alternativa para ampliar essa exploração é o uso de \textit{fuzzing} \cit
 Essa técnica gera e modifica entradas automaticamente, utilizando informações obtidas durante a execução para selecionar entradas capazes de alcançar novos comportamentos. 
 No contexto de processadores, as entradas podem ser programas em Assembly e o comportamento de interesse pode ser representado pela cobertura do código RTL, por mudanças no estado arquitetural ou por transições em estruturas internas. 
 Trabalhos anteriores demonstraram que a geração de instruções orientada por cobertura e a comparação com modelos de referência podem revelar erros que não são detectados por suítes convencionais \citep{Hur:2021:DifuzzRTL,Solt:2024:Cascade,Guo:2025:DiveFuzz,Lyu:2026:SimFuzz}. 
-% TODO: Perguntar angelo: Posso citar isso aqui? Deixar so fuzzers de diferentes estrategias
-% Nao tenho certeza como eu vou fazer a mutacao, nao queria me comprometer aqui.
 
- % Essa parte tenho certeza que vou fazer, nao entra em detalhes tao pequenos
 Entretanto, sequências completamente aleatórias têm baixa probabilidade de representar fluxos de execução relevantes. 
 Operações encontradas em programas reais apresentam padrões de dependência e de acesso à memória que refletem tarefas computacionais concretas. 
 Reduções, transformações de elementos, produtos escalares, multiplicações de matrizes, convoluções e percursos sobre estruturas de dados combinam instruções de maneiras que exercitam simultaneamente unidades funcionais, mecanismos de encaminhamento, controle de desvios e interfaces de memória. 
 O uso de blocos extraídos desses programas como corpus inicial permite preservar características de código real enquanto mutações sistemáticas exploram novas combinações. 
 Para que essas características sejam preservadas ao longo do processo de geração, a mutação deve atuar sobre a estrutura desses blocos, e não sobre instruções isoladas, evitando que sequências computacionalmente coerentes sejam fragmentadas em programas sem relação com os padrões de execução que motivaram a escolha desses blocos.
  
-\textbf{O objetivo geral deste trabalho é a construção de um \textit{fuzzer} para o RS5 baseado no RISCOF, capaz de gerar programas de teste a partir da combinação e modificação de blocos semânticos em Assembly extraídos de aplicações reais e executá-los em diferentes configurações do processador}. Os programas gerados serão avaliados por meio da comparação entre o comportamento do RS5, simulado com o Verilator, e o modelo de referência Sail, utilizando métricas de cobertura e de diversidade estrutural para orientar a exploração do espaço de testes. 
+\textbf{O objetivo geral deste trabalho é a construção de um \textit{fuzzer} para o RS5 baseado no RISCOF, capaz de gerar programas de teste a partir da combinação e modificação de blocos semânticos em Assembly extraídos de aplicações reais e executá-los em diferentes configurações do processador}. Os programas gerados serão avaliados por meio da comparação entre o comportamento do RS5, simulado com o Verilator, e o modelo de referência Sail, utilizando como realimentação o estado interno do processador, com as fontes estudadas no \cref{chap:previo}, para orientar a exploração do espaço de testes. 
  
 Para atingir o objetivo geral, são definidos os seguintes objetivos específicos:
  
